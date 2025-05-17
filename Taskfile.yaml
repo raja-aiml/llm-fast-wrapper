@@ -1,73 +1,73 @@
-version: '3'
+version: "3"
 
 env:
-  DATABASE_URL: postgres://llm:llm@localhost:5432/llmlogs?sslmode=disable
+  DATABASE_URL: "postgres://llm:llm@localhost:5432/llmlogs?sslmode=disable"
 
 tasks:
   default:
-    desc: List available tasks
+    desc: "📋 List available tasks"
     cmds:
       - task --list
 
   dev:
-    desc: Start the API (default: Fiber)
+    desc: "🚀 Start the API (default: Fiber)"
     cmds:
       - go run ./cmd/main.go serve --fiber
 
   dev:gin:
-    desc: Start the API using Gin
+    desc: "🚀 Start the API using Gin"
     cmds:
       - go run ./cmd/main.go serve --gin
 
   test:
-    desc: Run all unit tests
+    desc: "🧪 Run all unit tests"
     cmds:
       - go test -cover ./...
 
   test:ginkgo:
-    desc: Run Ginkgo unit tests
+    desc: "🧪 Run Ginkgo unit tests"
     cmds:
       - ginkgo -r --cover --randomize-all --fail-on-pending
 
   client:run:
-    desc: Run streaming client
+    desc: "💬 Run streaming client"
     cmds:
       - python3 client/cli.py --prompt "hello world"
 
   docker:up:
-    desc: Start observability infra (PostgreSQL, Prometheus, Jaeger, Splunk)
+    desc: "🐳 Start observability infra (PostgreSQL, Prometheus, Jaeger, Splunk)"
     dir: docker
     cmds:
       - docker compose up -d
 
   docker:down:
-    desc: Stop and remove containers
+    desc: "🧼 Stop and remove containers"
     dir: docker
     cmds:
       - docker compose down
 
   docker:ps:
-    desc: Show container status
+    desc: "🔍 Show container status"
     dir: docker
     cmds:
       - docker compose ps
 
   docker:build:
-    desc: Build production image
+    desc: "🛠️ Build production Docker image"
     cmds:
       - docker build -t llm-fast-wrapper .
 
   docker:run:
-    desc: Run app from Docker
+    desc: "🧪 Run app from Docker (Fiber)"
     cmds:
       - docker run --rm -p 8080:8080 llm-fast-wrapper serve --fiber
 
   kind:up:
-    desc: Create a local kind cluster
+    desc: "📦 Create a local kind cluster"
     cmds:
       - bash scripts/kind-setup.sh
 
   kind:down:
-    desc: Cleanup kind cluster and Helm release
+    desc: "🗑️ Cleanup kind cluster and Helm release"
     cmds:
       - bash scripts/cleanup.sh
