@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	openai "github.com/openai/openai-go"
 	"go.uber.org/zap"
@@ -15,63 +15,111 @@ import (
 	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
 )
 
-func RunQuery(client openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
-	logger.Infof("Running one-shot query with stream=%v", cfg.Stream)
-	send(client, cfg, logger, cfg.Query)
+func RunQuery(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
+	logger.Infof("Running query with stream=%v", cfg.Stream)
+	if cfg.Stream {
+		runStreaming(client, cfg, logger)
+	} else {
+		runSync(client, cfg, logger)
+	}
 }
 
-func RunInteractive(client openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
+func RunInteractive(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
 	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).Render("Interactive LLM Chat"))
 	scanner := bufio.NewScanner(os.Stdin)
-
 	for {
 		fmt.Print(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("36")).Render("You: "))
 		if !scanner.Scan() {
 			break
 		}
-		line := strings.TrimSpace(scanner.Text())
-		if line == "exit" || line == "quit" {
+		input := strings.TrimSpace(scanner.Text())
+		if input == "exit" || input == "quit" {
 			logger.Info("Exiting interactive mode")
 			break
 		}
-		send(client, cfg, logger, line)
+		cfg.Query = input
+		RunQuery(client, cfg, logger)
 	}
 }
 
-func send(client openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger, prompt string) {
-	messages := []openai.ChatCompletionMessageParamUnion{
-		openai.UserMessage(prompt),
-	}
-
-	logger.Debugf("Sending request with prompt: %s", prompt)
-	start := time.Now()
-
-	if cfg.Stream {
-		logger.Warn("Streaming not implemented; falling back to standard request")
-	}
-
-	resp, err := client.Chat.Completions.New(context.TODO(), openai.ChatCompletionNewParams{
-		Messages:    messages,
-		Model:       cfg.Model,
+func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
+	ctx := context.Background()
+	req := openai.ChatCompletionNewParams{
+		Model: openai.ChatModel(cfg.Model),
+		Messages: []openai.ChatCompletionMessageParamUnion{
+			openai.UserMessage(cfg.Query),
+		},
 		Temperature: openai.Float(cfg.Temperature),
-	})
+	}
+	resp, err := client.Chat.Completions.New(ctx, req)
 	if err != nil {
-		logger.Fatalf("Chat completion failed: %v", err)
+		logger.Fatalf("OpenAI call failed: %v", err)
 	}
 
-	duration := time.Since(start)
-	logger.Infof("Response received in %s", duration)
+	if len(resp.Choices) == 0 {
+		logger.Warn("Received empty response from OpenAI")
+		return
+	}
 
-	if len(resp.Choices) > 0 {
-		content := resp.Choices[0].Message.Content
-		if content != "" {
-			fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
-			fmt.Println(content)
-			logger.Debugf("Response: %d characters", len(content))
-		} else {
-			logger.Warn("Received empty response")
+	content := resp.Choices[0].Message.Content
+	printResponse(content, cfg.Markdown)
+	logger.Debugf("Response length: %d characters", len(content))
+}
+
+func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
+	ctx := context.Background()
+
+	params := openai.ChatCompletionNewParams{
+		Model: openai.ChatModel(cfg.Model),
+		Messages: []openai.ChatCompletionMessageParamUnion{
+			openai.UserMessage(cfg.Query),
+		},
+		Temperature: openai.Float(cfg.Temperature),
+	}
+	stream := client.Chat.Completions.NewStreaming(ctx, params)
+	defer stream.Close()
+
+	var fullText string
+	for stream.Next() {
+		chunk := stream.Current()
+		if len(chunk.Choices) > 0 {
+			text := chunk.Choices[0].Delta.Content
+			fullText += text
+			fmt.Print(text)
 		}
-	} else {
-		logger.Warn("No choices returned in response")
 	}
+
+	if err := stream.Err(); err != nil {
+		logger.Fatalf("Streaming error: %v", err)
+	}
+
+	fmt.Println()
+
+	printResponse(fullText, cfg.Markdown)
+	logger.Debugf("Streaming response length: %d characters", len(fullText))
+}
+
+func printResponse(content string, markdown bool) {
+	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
+	if markdown {
+		renderMarkdown(content)
+	} else {
+		fmt.Println(content)
+	}
+}
+
+func renderMarkdown(text string) {
+	r, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	if err != nil {
+		fmt.Println("Failed to render markdown:", err)
+		fmt.Println(text)
+		return
+	}
+	out, err := r.Render(text)
+	if err != nil {
+		fmt.Println("Markdown rendering error:", err)
+		fmt.Println(text)
+		return
+	}
+	fmt.Println(out)
 }

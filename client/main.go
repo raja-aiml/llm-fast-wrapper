@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
 	"github.com/spf13/cobra"
 
 	"github.com/raja.aiml/llm-fast-wrapper/client/internal/chat"
@@ -25,13 +27,18 @@ func main() {
 				logger.Fatal("Missing environment variable: OPENAI_API_KEY")
 			}
 
-			client := config.NewClient(apiKey, cfg.BaseURL)
-			logger.Infof("Connected to endpoint using model: %s", cfg.Model)
+			var opts []option.RequestOption
+			opts = append(opts, option.WithAPIKey(apiKey))
+			if cfg.BaseURL != "" {
+				opts = append(opts, option.WithBaseURL(cfg.BaseURL))
+			}
+
+                client := openai.NewClient(opts...)
 
 			if cfg.Query != "" {
-				chat.RunQuery(client, cfg, logger)
+				chat.RunQuery(&client, cfg, logger)
 			} else {
-				chat.RunInteractive(client, cfg, logger)
+				chat.RunInteractive(&client, cfg, logger)
 			}
 		},
 	}

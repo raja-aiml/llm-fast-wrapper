@@ -5,7 +5,7 @@ import (
 	"github.com/openai/openai-go/option"
 )
 
-const DefaultModel = "gpt-4-1106-preview"
+const DefaultModel = "gpt-4"
 
 type CLIConfig struct {
 	Query       string
@@ -20,7 +20,7 @@ func NewCLIConfig() *CLIConfig {
 	return &CLIConfig{}
 }
 
-func NewClient(apiKey string, baseURL string) openai.Client {
+func NewClient(apiKey, baseURL string) openai.Client {
 	opts := []option.RequestOption{option.WithAPIKey(apiKey)}
 	if baseURL != "" {
 		opts = append(opts, option.WithBaseURL(baseURL))
