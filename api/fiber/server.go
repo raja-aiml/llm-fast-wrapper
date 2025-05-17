@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/your-org/llm-fast-wrapper/internal/llm"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/llm"
 )
 
 func Start() error {

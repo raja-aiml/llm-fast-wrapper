@@ -5,9 +5,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/raja.aiml/llm-fast-wrapper/api/fiberapi"
+	"github.com/raja.aiml/llm-fast-wrapper/api/ginapi"
 	"github.com/spf13/cobra"
-	"github.com/your-org/llm-fast-wrapper/api/fiberapi"
-	"github.com/your-org/llm-fast-wrapper/api/ginapi"
 )
 
 var useFiber bool

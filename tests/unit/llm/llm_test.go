@@ -4,7 +4,7 @@ import (
     "testing"
     "time"
 
-    "github.com/your-org/llm-fast-wrapper/internal/llm"
+    "github.com/raja.aiml/llm-fast-wrapper/internal/llm"
 )
 
 func TestOpenAIStreamer(t *testing.T) {
