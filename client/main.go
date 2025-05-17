@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/raja.aiml/llm-fast-wrapper/client/internal/chat"
+	"github.com/raja.aiml/llm-fast-wrapper/client/internal/help"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/logging"
 )
@@ -19,16 +21,9 @@ func main() {
 	cfg := config.NewCLIConfig()
 
 	rootCmd := &cobra.Command{
-		Use:   "llm-client",
-		Short: "CLI to interact with OpenAI-compatible LLM",
-		Example: `One-off query (no interactive prompt):
-  go run client/main.go --query "Tell me a joke" --stream=false
-
-Fully interactive, non-streaming mode:
-  go run client/main.go --stream=false
-
-Binary usage:
-  ./llm-client --stream=false`,
+		Use:     "llm-client",
+		Short:   "CLI to interact with OpenAI-compatible LLM",
+		Example: help.LoadUsageMarkdown("client/internal/help/usage.md"),
 		Run: func(cmd *cobra.Command, args []string) {
 			apiKey := os.Getenv("OPENAI_API_KEY")
 			if apiKey == "" {
@@ -58,7 +53,20 @@ Binary usage:
 	rootCmd.Flags().BoolVar(&cfg.Stream, "stream", false, "Enable streaming response (set true to stream)")
 	rootCmd.Flags().StringVar(&cfg.BaseURL, "base-url", "", "Custom OpenAI-compatible base URL")
 
+	rootCmd.AddCommand(helpCommand())
+
 	if err := rootCmd.Execute(); err != nil {
 		logger.Fatalf("Command execution failed: %v", err)
+	}
+}
+
+func helpCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "help",
+		Short: "Show full Markdown-based usage guide",
+		Run: func(cmd *cobra.Command, args []string) {
+			md := help.LoadUsageMarkdown("client/help/usage.md")
+			fmt.Println(md)
+		},
 	}
 }
