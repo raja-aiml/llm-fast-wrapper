@@ -79,24 +79,23 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 	stream := client.Chat.Completions.NewStreaming(ctx, params)
 	defer stream.Close()
 
-	var fullText string
-	for stream.Next() {
-		chunk := stream.Current()
-		if len(chunk.Choices) > 0 {
-			text := chunk.Choices[0].Delta.Content
-			fullText += text
-			fmt.Print(text)
+		// Print assistant label once, then stream content
+		fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
+		var fullText string
+		for stream.Next() {
+			chunk := stream.Current()
+			if len(chunk.Choices) > 0 {
+				text := chunk.Choices[0].Delta.Content
+				fullText += text
+				fmt.Print(text)
+			}
 		}
-	}
-
-	if err := stream.Err(); err != nil {
-		logger.Fatalf("Streaming error: %v", err)
-	}
-
-	fmt.Println()
-
-	printResponse(fullText, cfg.Markdown)
-	logger.Debugf("Streaming response length: %d characters", len(fullText))
+		if err := stream.Err(); err != nil {
+			logger.Fatalf("Streaming error: %v", err)
+		}
+		// finish line after streaming
+		fmt.Println()
+		logger.Debugf("Streaming response length: %d characters", len(fullText))
 }
 
 func printResponse(content string, markdown bool) {
