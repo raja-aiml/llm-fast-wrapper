@@ -1,3 +1,3 @@
-module github.com/your-org/llm-fast-wrapper
+module github.com/raja.aiml/llm-fast-wrapper
 
 go 1.22

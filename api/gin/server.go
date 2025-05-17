@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/your-org/llm-fast-wrapper/internal/llm"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/llm"
 )
 
 func Start() error {

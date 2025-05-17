@@ -4,7 +4,7 @@ import (
     "testing"
     "time"
 
-    "github.com/your-org/llm-fast-wrapper/internal/logs"
+    "github.com/raja.aiml/llm-fast-wrapper/internal/logs"
 )
 
 func TestMemoryLogger(t *testing.T) {

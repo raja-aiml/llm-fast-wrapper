@@ -5,7 +5,7 @@ package main
 import (
 	"log"
 
-	"github.com/your-org/llm-fast-wrapper/cmd"
+	"github.com/raja.aiml/llm-fast-wrapper/cmd"
 )
 
 func main() {

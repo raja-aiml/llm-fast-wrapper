@@ -5,7 +5,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-org/llm-fast-wrapper
+    repoURL: https://github.com/raja.aiml/llm-fast-wrapper
     targetRevision: main
     path: charts/llm-fast-wrapper
   destination:
