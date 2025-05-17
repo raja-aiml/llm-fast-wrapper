@@ -33,7 +33,7 @@ func main() {
 				opts = append(opts, option.WithBaseURL(cfg.BaseURL))
 			}
 
-                client := openai.NewClient(opts...)
+			client := openai.NewClient(opts...)
 
 			if cfg.Query != "" {
 				chat.RunQuery(&client, cfg, logger)
