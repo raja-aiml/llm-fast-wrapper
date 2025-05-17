@@ -1,0 +1,18 @@
+# Binaries
+llm-fast-wrapper
+*.exe
+*.test
+*.out
+
+# IDE
+.vscode/
+.idea/
+
+# Dependency directories
+vendor/
+
+# Environment
+.env
+
+# Python cache
+__pycache__/
