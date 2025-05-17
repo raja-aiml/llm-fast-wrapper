@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
@@ -43,7 +44,24 @@ func RunInteractive(client *openai.Client, cfg *config.CLIConfig, logger *zap.Su
 }
 
 func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
-	ctx := context.Background()
+   ctx := context.Background()
+   // interactive spinner while thinking
+   style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("34"))
+   done := make(chan struct{})
+   go func() {
+       spinner := []rune{'|', '/', '-', '\\'}
+       i := 0
+       for {
+           select {
+           case <-done:
+               return
+           default:
+               fmt.Printf("\r%s %c", style.Render("Thinking..."), spinner[i%len(spinner)])
+               i++
+               time.Sleep(200 * time.Millisecond)
+           }
+       }
+   }()
 	req := openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(cfg.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -51,7 +69,11 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 		},
 		Temperature: openai.Float(cfg.Temperature),
 	}
-	resp, err := client.Chat.Completions.New(ctx, req)
+   resp, err := client.Chat.Completions.New(ctx, req)
+   // stop spinner
+   close(done)
+   // clear spinner line
+   fmt.Printf("\r")
 	if err != nil {
 		logger.Fatalf("OpenAI call failed: %v", err)
 	}
