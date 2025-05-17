@@ -5,8 +5,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/raja.aiml/llm-fast-wrapper/api/fiberapi"
-	"github.com/raja.aiml/llm-fast-wrapper/api/ginapi"
+	fiberapi "github.com/raja.aiml/llm-fast-wrapper/api/fiber"
+	ginapi "github.com/raja.aiml/llm-fast-wrapper/api/gin"
 	"github.com/spf13/cobra"
 )
 
