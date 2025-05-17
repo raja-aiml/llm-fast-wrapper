@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	openai "github.com/openai/openai-go"
 	"go.uber.org/zap"
 
+	"github.com/raja.aiml/llm-fast-wrapper/client/internal/ui"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
 )
 
@@ -44,24 +44,11 @@ func RunInteractive(client *openai.Client, cfg *config.CLIConfig, logger *zap.Su
 }
 
 func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
-   ctx := context.Background()
-   // interactive spinner while thinking
-   style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("34"))
-   done := make(chan struct{})
-   go func() {
-       spinner := []rune{'|', '/', '-', '\\'}
-       i := 0
-       for {
-           select {
-           case <-done:
-               return
-           default:
-               fmt.Printf("\r%s %c", style.Render("Thinking..."), spinner[i%len(spinner)])
-               i++
-               time.Sleep(200 * time.Millisecond)
-           }
-       }
-   }()
+	ctx := context.Background()
+
+	sp := ui.NewSpinner()
+	sp.Start()
+
 	req := openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(cfg.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -69,11 +56,10 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 		},
 		Temperature: openai.Float(cfg.Temperature),
 	}
-   resp, err := client.Chat.Completions.New(ctx, req)
-   // stop spinner
-   close(done)
-   // clear spinner line
-   fmt.Printf("\r")
+	resp, err := client.Chat.Completions.New(ctx, req)
+
+	sp.Stop()
+
 	if err != nil {
 		logger.Fatalf("OpenAI call failed: %v", err)
 	}
@@ -101,23 +87,23 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 	stream := client.Chat.Completions.NewStreaming(ctx, params)
 	defer stream.Close()
 
-		// Print assistant label once, then stream content
-		fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
-		var fullText string
-		for stream.Next() {
-			chunk := stream.Current()
-			if len(chunk.Choices) > 0 {
-				text := chunk.Choices[0].Delta.Content
-				fullText += text
-				fmt.Print(text)
-			}
+	// Print assistant label once, then stream content
+	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
+	var fullText string
+	for stream.Next() {
+		chunk := stream.Current()
+		if len(chunk.Choices) > 0 {
+			text := chunk.Choices[0].Delta.Content
+			fullText += text
+			fmt.Print(text)
 		}
-		if err := stream.Err(); err != nil {
-			logger.Fatalf("Streaming error: %v", err)
-		}
-		// finish line after streaming
-		fmt.Println()
-		logger.Debugf("Streaming response length: %d characters", len(fullText))
+	}
+	if err := stream.Err(); err != nil {
+		logger.Fatalf("Streaming error: %v", err)
+	}
+	// finish line after streaming
+	fmt.Println()
+	logger.Debugf("Streaming response length: %d characters", len(fullText))
 }
 
 func printResponse(content string, markdown bool) {
