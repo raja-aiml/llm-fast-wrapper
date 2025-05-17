@@ -1,4 +1,4 @@
-# src/client/client.py
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -25,20 +25,17 @@ console = Console(stderr=True)
 # 🧠 Unified Response Dispatcher
 # ─────────────────────────────────────────────────────────────────────────────
 def dispatch_response(client, model, query, temperature, render_markdown, stream):
-    """
-    Handle both stream and non-stream query responses.
-    """
-    logger.debug(f"Dispatching query to model={model}, stream={stream}, temp={temperature}")
+    logger.debug(f"Dispatching query: model={model}, temperature={temperature}, stream={stream}")
     if stream:
         stream_response(client, model, query, temperature, render_markdown)
     else:
         single_response(client, model, query, temperature, render_markdown)
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 📤 Streaming Response
 # ─────────────────────────────────────────────────────────────────────────────
 def stream_response(client, model, query, temperature, render_markdown):
+    logger.debug(f"Sending streaming request: model={model}, query={query}")
     full_response = ""
     try:
         stream = client.chat.completions.create(
@@ -47,7 +44,6 @@ def stream_response(client, model, query, temperature, render_markdown):
             temperature=temperature,
             stream=True
         )
-
         console.print("[bold yellow]Assistant:[/bold yellow] ", end="")
         for chunk in stream:
             if chunk.choices and chunk.choices[0].delta.content:
@@ -61,17 +57,17 @@ def stream_response(client, model, query, temperature, render_markdown):
             console.print("\n[bold blue]Rendered Markdown:[/bold blue]")
             console.print(Markdown(full_response))
 
-        logger.info("Streamed response complete.")
+        logger.info("Streamed response successfully received.")
     except Exception as e:
-        logger.exception("Streaming request failed.")
+        logger.exception("Error during streaming request.")
         console.print(f"[bold red]Error:[/bold red] {e}")
         sys.exit(1)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📦 Non-streaming Response
 # ─────────────────────────────────────────────────────────────────────────────
 def single_response(client, model, query, temperature, render_markdown):
+    logger.debug(f"Sending non-stream request: model={model}, query={query}")
     try:
         with console.status("[bold yellow]Thinking...[/bold yellow]", spinner="dots"):
             response = client.chat.completions.create(
@@ -88,17 +84,17 @@ def single_response(client, model, query, temperature, render_markdown):
             console.print("\n[bold blue]Rendered Markdown:[/bold blue]")
             console.print(Markdown(result))
 
-        logger.info("Non-stream response complete.")
+        logger.info("Non-stream response successfully received.")
     except Exception as e:
-        logger.exception("Single request failed.")
+        logger.exception("Error during non-streaming request.")
         console.print(f"[bold red]Error:[/bold red] {e}")
         sys.exit(1)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧑‍💻 Interactive CLI Loop
 # ─────────────────────────────────────────────────────────────────────────────
 def interactive_mode(client, model, temperature, render_markdown, stream):
+    logger.info("Entering interactive mode.")
     console.print("[bold green]Interactive LLM Chat[/bold green]")
     console.print("Type 'exit' or 'quit' to end.\n")
 
@@ -108,9 +104,8 @@ def interactive_mode(client, model, temperature, render_markdown, stream):
         if query.lower() in ("exit", "quit"):
             logger.info("User exited interactive mode.")
             break
-
+        logger.debug(f"User input: {query}")
         dispatch_response(client, model, query, temperature, render_markdown, stream)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🚪 Main CLI
@@ -122,26 +117,26 @@ def interactive_mode(client, model, temperature, render_markdown, stream):
 @click.option("--markdown", is_flag=True, help="Render output in Markdown")
 @click.option("--stream/--no-stream", default=True, help="Stream output (default: stream)")
 @click.option("--base-url", default="http://localhost:8000/v1", help="LLM server URL")
-
 def client(query, model, temperature, markdown, stream, base_url):
-    """
-    Interact with the LLM API in interactive or one-shot query mode.
-    """
-    # Validate required environment variables
+    logger.info("Client CLI launched.")
+    logger.debug(f"Params - query={query}, model={model}, temperature={temperature}, stream={stream}, base_url={base_url}")
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
+        logger.error("Missing environment variable: OPENAI_API_KEY")
         console.print("[bold red]Error:[/bold red] Missing required environment variable OPENAI_API_KEY")
         sys.exit(1)
-    logger.info("CLI started.")
-    openai_client = openai.OpenAI(base_url=base_url, api_key=api_key)
 
-    # Dispatch mode selection
+    # Initialize OpenAI-compatible client
+    openai_client = openai.OpenAI(base_url=base_url, api_key=api_key)
+    logger.info(f"Connected to LLM API at endpoint: {base_url}")
+
     mode = "interactive" if not query else "query"
+    logger.info(f"Mode selected: {mode}")
     {
         "interactive": lambda: interactive_mode(openai_client, model, temperature, markdown, stream),
         "query": lambda: dispatch_response(openai_client, model, query, temperature, markdown, stream)
     }[mode]()
-
 
 if __name__ == "__main__":  # pragma: no cover
     client()  # pragma: no cover
