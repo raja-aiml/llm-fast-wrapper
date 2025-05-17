@@ -21,6 +21,14 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "llm-client",
 		Short: "CLI to interact with OpenAI-compatible LLM",
+		Example: `One-off query (no interactive prompt):
+  go run client/main.go --query "Tell me a joke" --stream=false
+
+Fully interactive, non-streaming mode:
+  go run client/main.go --stream=false
+
+Binary usage:
+  ./llm-client --stream=false`,
 		Run: func(cmd *cobra.Command, args []string) {
 			apiKey := os.Getenv("OPENAI_API_KEY")
 			if apiKey == "" {
@@ -47,7 +55,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&cfg.Model, "model", "m", config.DefaultModel, "Model name")
 	rootCmd.Flags().Float64VarP(&cfg.Temperature, "temperature", "t", 0.7, "Sampling temperature")
 	rootCmd.Flags().BoolVar(&cfg.Markdown, "markdown", false, "Render output in Markdown")
-	rootCmd.Flags().BoolVar(&cfg.Stream, "stream", true, "Enable streaming response")
+	rootCmd.Flags().BoolVar(&cfg.Stream, "stream", false, "Enable streaming response (set true to stream)")
 	rootCmd.Flags().StringVar(&cfg.BaseURL, "base-url", "", "Custom OpenAI-compatible base URL")
 
 	if err := rootCmd.Execute(); err != nil {
