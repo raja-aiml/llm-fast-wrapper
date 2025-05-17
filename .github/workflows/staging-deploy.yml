@@ -1,0 +1,17 @@
+name: Staging Deploy
+on:
+  push:
+    branches: [staging]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - uses: azure/setup-kubectl@v4
+      - run: echo "$KUBE_CONFIG" | base64 -d > kubeconfig
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      - run: helm upgrade --install llm charts/llm-fast-wrapper --namespace llm --create-namespace --set llm.backend=openai --set llm.openai.apiKey=${{ secrets.OPENAI_API_KEY }}
+        env:
+          KUBECONFIG: kubeconfig
