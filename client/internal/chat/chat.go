@@ -28,6 +28,7 @@ func RunQuery(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredL
 func RunInteractive(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
 	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42")).Render("Interactive LLM Chat"))
 	scanner := bufio.NewScanner(os.Stdin)
+
 	for {
 		fmt.Print(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("36")).Render("You: "))
 		if !scanner.Scan() {
@@ -39,16 +40,19 @@ func RunInteractive(client *openai.Client, cfg *config.CLIConfig, logger *zap.Su
 			break
 		}
 		cfg.Query = input
-		RunQuery(client, cfg, logger)
+
+		// Show spinner only in interactive sessions
+		spinner := ui.NewSpinner()
+		spinner.Start()
+
+		runSync(client, cfg, logger)
+
+		spinner.Stop()
 	}
 }
 
 func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
 	ctx := context.Background()
-
-	sp := ui.NewSpinner()
-	sp.Start()
-
 	req := openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(cfg.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -57,9 +61,6 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 		Temperature: openai.Float(cfg.Temperature),
 	}
 	resp, err := client.Chat.Completions.New(ctx, req)
-
-	sp.Stop()
-
 	if err != nil {
 		logger.Fatalf("OpenAI call failed: %v", err)
 	}
@@ -76,7 +77,6 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 
 func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
 	ctx := context.Background()
-
 	params := openai.ChatCompletionNewParams{
 		Model: openai.ChatModel(cfg.Model),
 		Messages: []openai.ChatCompletionMessageParamUnion{
@@ -87,8 +87,8 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 	stream := client.Chat.Completions.NewStreaming(ctx, params)
 	defer stream.Close()
 
-	// Print assistant label once, then stream content
 	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
+
 	var fullText string
 	for stream.Next() {
 		chunk := stream.Current()
@@ -98,10 +98,11 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 			fmt.Print(text)
 		}
 	}
+
 	if err := stream.Err(); err != nil {
 		logger.Fatalf("Streaming error: %v", err)
 	}
-	// finish line after streaming
+
 	fmt.Println()
 	logger.Debugf("Streaming response length: %d characters", len(fullText))
 }
