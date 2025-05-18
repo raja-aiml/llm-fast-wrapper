@@ -49,7 +49,6 @@ func main() {
 	rootCmd.Flags().StringVarP(&cfg.Query, "query", "q", "", "Prompt to send to the model")
 	rootCmd.Flags().StringVarP(&cfg.Model, "model", "m", config.DefaultModel, "Model name")
 	rootCmd.Flags().Float64VarP(&cfg.Temperature, "temperature", "t", 0.7, "Sampling temperature")
-	rootCmd.Flags().BoolVar(&cfg.Markdown, "markdown", false, "Render output in Markdown")
 	rootCmd.Flags().BoolVar(&cfg.Stream, "stream", false, "Enable streaming response (set true to stream)")
 	rootCmd.Flags().StringVar(&cfg.BaseURL, "base-url", "", "Custom OpenAI-compatible base URL")
 	rootCmd.Flags().StringVar(&cfg.Output, "output", "text", "Output format: text, markdown, json, yaml")

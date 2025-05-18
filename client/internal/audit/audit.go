@@ -1,60 +1,15 @@
 package audit
 
 import (
-   "encoding/json"
-   "fmt"
-   "os"
-   "strings"
-   "time"
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
 
-   "github.com/charmbracelet/glamour"
-   "github.com/charmbracelet/lipgloss"
-   "github.com/raja.aiml/llm-fast-wrapper/internal/config"
-   "gopkg.in/yaml.v3"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
 )
 
-func PrintResponse(content string, cfg *config.CLIConfig) {
-	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
-
-	switch cfg.Output {
-   case "markdown":
-       // Render markdown to terminal
-       if strings.TrimSpace(content) == "" {
-           fmt.Println("No content to render.")
-       } else {
-           r, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
-           if err != nil {
-               fmt.Println("Failed to render markdown:", err)
-               fmt.Println(content)
-           } else {
-               out, err := r.Render(content)
-               if err != nil {
-                   fmt.Println("Markdown rendering error:", err)
-                   fmt.Println(content)
-               } else {
-                   fmt.Println(out)
-               }
-           }
-       }
-	case "json":
-		out, _ := json.MarshalIndent(map[string]string{
-			"response": content,
-		}, "", "  ")
-		fmt.Println(string(out))
-	case "yaml":
-		out, _ := yaml.Marshal(map[string]string{
-			"response": content,
-		})
-		fmt.Println(string(out))
-	default: // "text"
-		fmt.Println(content)
-	}
-
-	// Record prompt and response to audit log
-	LogAudit(cfg.Query, content, cfg)
-}
-
-// LogAudit appends an audit entry (prompt and response) to the configured log file.
+// LogAudit appends the prompt/response to a structured JSONL audit file.
 func LogAudit(prompt, response string, cfg *config.CLIConfig) {
 	entry := map[string]any{
 		"time":     time.Now().Format(time.RFC3339),
@@ -62,13 +17,24 @@ func LogAudit(prompt, response string, cfg *config.CLIConfig) {
 		"prompt":   prompt,
 		"response": response,
 	}
-	data, _ := json.Marshal(entry)
+
+	data, err := json.Marshal(entry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal audit entry: %v\n", err)
+		return
+	}
 
 	f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open audit log file: %v\n", err)
 		return
 	}
 	defer f.Close()
-	f.Write(data)
-	f.Write([]byte("\n"))
+
+	if _, err := f.Write(data); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write audit data: %v\n", err)
+	}
+	if _, err := f.Write([]byte("\n")); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write newline to audit log: %v\n", err)
+	}
 }
