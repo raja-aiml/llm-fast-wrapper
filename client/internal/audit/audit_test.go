@@ -1,7 +1,10 @@
 package audit
 
 import (
+   "bytes"
    "encoding/json"
+   "fmt"
+   "io"
    "os"
    "strings"
    "testing"

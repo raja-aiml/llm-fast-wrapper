@@ -10,11 +10,21 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// dependency injection for testing
+// markdownRenderer defines the interface for Markdown rendering backends.
+type markdownRenderer interface {
+   Render(string) (string, error)
+}
+
+// dependency injection hooks for testing: override rendering and serialization.
 var (
-   newTermRenderer   = glamour.NewTermRenderer
+   // newTermRenderer is the factory for our Markdown renderer
+   newTermRenderer = func(opts ...glamour.TermRendererOption) (markdownRenderer, error) {
+       return glamour.NewTermRenderer(opts...)
+   }
+   // jsonMarshalIndent serializes JSON responses
    jsonMarshalIndent = json.MarshalIndent
-   yamlMarshal       = yaml.Marshal
+   // yamlMarshal serializes YAML responses
+   yamlMarshal = yaml.Marshal
 )
 
 // Print renders model response based on format: markdown, json, yaml, or plain text.
@@ -38,7 +48,7 @@ func renderMarkdown(content string) {
 		fmt.Println("No content to render.")
 		return
 	}
-	r, err := glamour.NewTermRenderer(glamour.WithAutoStyle())
+	r, err := newTermRenderer(glamour.WithAutoStyle())
 	if err != nil {
 		fmt.Println("Failed to render markdown:", err)
 		fmt.Println(content)
@@ -54,7 +64,7 @@ func renderMarkdown(content string) {
 }
 
 func printJSON(content string) {
-	out, err := json.MarshalIndent(map[string]string{"response": content}, "", "  ")
+   out, err := jsonMarshalIndent(map[string]string{"response": content}, "", "  ")
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
 		fmt.Println(content)
@@ -64,7 +74,7 @@ func printJSON(content string) {
 }
 
 func printYAML(content string) {
-	out, err := yaml.Marshal(map[string]string{"response": content})
+   out, err := yamlMarshal(map[string]string{"response": content})
 	if err != nil {
 		fmt.Println("YAML encoding error:", err)
 		fmt.Println(content)

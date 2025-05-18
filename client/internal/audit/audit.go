@@ -9,6 +9,11 @@ import (
 	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
 )
 
+// injection hooks for testing: override JSON marshalling and file opening
+var (
+   jsonMarshal = json.Marshal
+   openFile    = os.OpenFile
+)
 // LogAudit appends the prompt/response to a structured JSONL audit file.
 func LogAudit(prompt, response string, cfg *config.CLIConfig) {
 	entry := map[string]any{
@@ -18,13 +23,13 @@ func LogAudit(prompt, response string, cfg *config.CLIConfig) {
 		"response": response,
 	}
 
-	data, err := json.Marshal(entry)
+   data, err := jsonMarshal(entry)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to marshal audit entry: %v\n", err)
 		return
 	}
 
-	f, err := os.OpenFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+   f, err := openFile(cfg.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to open audit log file: %v\n", err)
 		return
