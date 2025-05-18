@@ -8,14 +8,15 @@ import (
 const DefaultModel = "gpt-4"
 
 type CLIConfig struct {
-	Query       string
-	Model       string
-	Temperature float64
-	Markdown    bool
-	Stream      bool
-	BaseURL     string
-	Output      string // json, yaml, text, markdown
-	LogFile     string // Optional log file path
+	Query        string
+	Model        string
+	Temperature  float64
+	Markdown     bool
+	Stream       bool
+	BaseURL      string
+	Output       string
+	LogFile      string
+	AuditEnabled bool
 }
 
 func NewCLIConfig() *CLIConfig {

@@ -74,7 +74,9 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 
 	content := resp.Choices[0].Message.Content
 	printer.Print(content, cfg.Output)
-	audit.LogAudit(cfg.Query, content, cfg)
+	if cfg.AuditEnabled {
+		audit.LogAudit(cfg.Query, content, cfg)
+	}
 	logger.Debugf("Response length: %d characters", len(content))
 }
 

@@ -53,6 +53,7 @@ func main() {
 	rootCmd.Flags().StringVar(&cfg.BaseURL, "base-url", "", "Custom OpenAI-compatible base URL")
 	rootCmd.Flags().StringVar(&cfg.Output, "output", "text", "Output format: text, markdown, json, yaml")
 	rootCmd.Flags().StringVar(&cfg.LogFile, "log-file", "llm-client.log", "Path to log file for prompts/responses")
+	rootCmd.Flags().BoolVar(&cfg.AuditEnabled, "audit", true, "Enable audit logging of prompt/response")
 
 	rootCmd.AddCommand(helpCommand())
 
