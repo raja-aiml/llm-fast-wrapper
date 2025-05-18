@@ -10,6 +10,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// dependency injection for testing
+var (
+   newTermRenderer   = glamour.NewTermRenderer
+   jsonMarshalIndent = json.MarshalIndent
+   yamlMarshal       = yaml.Marshal
+)
+
 // Print renders model response based on format: markdown, json, yaml, or plain text.
 func Print(content, format string) {
 	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))

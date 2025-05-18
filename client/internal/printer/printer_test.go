@@ -4,6 +4,7 @@ import (
    "bytes"
    "io"
    "os"
+   "strings"
    "testing"
 
    "github.com/stretchr/testify/assert"
@@ -61,4 +62,13 @@ func TestPrintCaseInsensitive(t *testing.T) {
        Print("bar", "YAML")
    })
    assert.Contains(t, out2, "response: bar")
+}
+// Test non-empty markdown rendering branch
+func TestPrintMarkdownNonEmpty(t *testing.T) {
+   out := captureOutput(func() {
+       Print("**bold**", "markdown")
+   })
+   // should render markdown without empty message
+   assert.NotContains(t, out, "No content to render.")
+   assert.NotEmpty(t, strings.TrimSpace(out))
 }

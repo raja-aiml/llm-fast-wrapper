@@ -7,6 +7,7 @@ import (
    "testing"
 
    "github.com/stretchr/testify/assert"
+   "github.com/stretchr/testify/require"
 )
 
 // captureOutput redirects stdout and returns captured output as string.
@@ -29,6 +30,12 @@ func TestHelpCommandMetadata(t *testing.T) {
 }
 
 func TestHelpCommandRun(t *testing.T) {
+   // Change working directory so usage.md path resolves correctly
+   cwd, err := os.Getwd()
+   require.NoError(t, err)
+   defer os.Chdir(cwd)
+   // move to project root (one above client directory)
+   require.NoError(t, os.Chdir(".."))
    cmd := helpCommand()
    out := captureOutput(func() {
        cmd.Run(cmd, []string{})
