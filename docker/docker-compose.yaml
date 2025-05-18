@@ -1,25 +1,25 @@
 services:
   postgres:
     extends:
-      file: tools/pgvector.yaml
+      file: tools/pgvector/pgvector.yaml
       service: postgres
     profiles: ["pgvector"]
 
   pgadmin:
     extends:
-      file: tools/pgvector.yaml
+      file: tools/pgvector/pgvector.yaml
       service: pgadmin
     profiles: ["pgvector"]
 
   splunk:
     extends:
-      file: tools/splunk.yaml
+      file: tools/splunk/splunk.yaml
       service: splunk
     profiles: ["splunk"]
 
   prometheus:
     extends:
-      file: tools/prometheus.yaml
+      file: tools/prometheus/prometheus.yaml
       service: prometheus
     profiles: ["prometheus"]
 
