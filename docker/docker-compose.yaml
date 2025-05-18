@@ -1,25 +1,33 @@
-version: "3.9"
 
 services:
   postgres:
     extends:
       file: tools/pgvector.yaml
       service: postgres
+      env_file:
+        - local.env
+    profiles: ["pgvector"]
 
   pgadmin:
     extends:
       file: tools/pgvector.yaml
       service: pgadmin
+    profiles: ["pgadmin"]
 
   splunk:
     extends:
       file: tools/splunk.yaml
       service: splunk
+      env_file:
+        - local.env
+    profiles: ["splunk"]
+
 
   prometheus:
     extends:
       file: tools/prometheus.yaml
       service: prometheus
+    profiles: ["prometheus"]
 
 volumes:
   pgdata:

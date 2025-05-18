@@ -3,8 +3,6 @@ services:
     image: splunk/splunk:latest
     platform: linux/amd64
     container_name: splunk
-    env_file:
-      - docker/local.env
     environment:
       SPLUNK_START_ARGS: --accept-license
       SPLUNK_PASSWORD: ${SPLUNK_PASSWORD}

@@ -1,7 +1,7 @@
-version: '3'
+version: '3.0'
 
 env:
-  DOCKER_ENV_FILE: local.env
+  DOCKER_ENV_FILE: ../local.env
   DOCKER_COMPOSE_FILE: docker-compose.yaml
 
 tasks:
@@ -24,7 +24,7 @@ tasks:
   ps:
     desc: "List running containers"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} ps
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} ps --all
 
   logs:
     desc: "Tail logs for all services"
@@ -32,16 +32,89 @@ tasks:
       - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} logs -f
 
   splunk-only:
-    desc: "Run only Splunk service"
+    desc: "Run only Splunk via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f splunk.yaml up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile splunk up -d --build
 
   pgvector-only:
     desc: "Run only Postgres and pgAdmin services"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f pgvector.yaml up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f tools/pgvector.yaml up -d --build
 
   prometheus-only:
     desc: "Run only Prometheus service"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f prometheus.yaml up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f tools/prometheus.yaml up -d --build
+
+  open-splunk:
+    desc: "Open Splunk UI in browser"
+    cmds:
+      - open http://localhost:8000
+
+  open-prometheus:
+    desc: "Open Prometheus UI in browser"
+    cmds:
+      - open http://localhost:9090
+
+  check-health:
+    desc: "Show container health status"
+    cmds:
+      - |
+        docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E 'postgres|pgadmin|splunk|prometheus' || echo "No containers found"
+
+  init-splunk-token:
+    desc: "Show Splunk login instructions with real password"
+    cmds:
+      - |
+        echo ""
+        echo "📘 Open Splunk UI at http://localhost:8000"
+        echo "🔐 Login: admin / ${SPLUNK_PASSWORD}"
+        echo "➕ Go to: Settings > Data Inputs > HTTP Event Collector > New Token"
+        echo "➡️ Name it: llm-fast-wrapper"
+        echo "✔️ Enable indexer acknowledgement and set index to: main"
+        echo ""
+
+  create-splunk-token:
+    desc: "Create or reuse Splunk HEC token and store in local.env and .secrets"
+    cmds:
+      - |
+        echo "🔐 Authenticating to Splunk..."
+        TOKEN=$(curl -ksu admin:${SPLUNK_PASSWORD} https://localhost:8089/services/auth/login \
+          -d username=admin -d password=${SPLUNK_PASSWORD} \
+          | grep -oPm1 "(?<=<sessionKey>)[^<]+")
+
+        if [ -z "$TOKEN" ]; then
+          echo "❌ Failed to get session token. Is Splunk running at https://localhost:8089?"
+          exit 1
+        fi
+
+        echo "🔎 Checking if HEC token exists..."
+        if curl -ks https://localhost:8089/services/data/inputs/http/llm-fast-wrapper \
+            -H "Authorization: Splunk $TOKEN" | grep -q "<token>"; then
+          echo "✅ Token already exists. Reusing existing token..."
+        else
+          echo "➕ Creating new HEC token..."
+          curl -ks -X POST https://localhost:8089/services/data/inputs/http \
+            -H "Authorization: Splunk $TOKEN" \
+            -d name=llm-fast-wrapper \
+            -d index=main \
+            -d sourcetype=manual \
+            -d disabled=false \
+            -d useACK=true
+        fi
+
+        echo "📦 Retrieving token value..."
+        HEC_TOKEN=$(curl -ks https://localhost:8089/services/data/inputs/http/llm-fast-wrapper \
+            -H "Authorization: Splunk $TOKEN" | grep -oPm1 "(?<=<token>)[^<]+")
+
+        echo "💾 Writing token to docker/.secrets/splunk.token..."
+        echo "$HEC_TOKEN" > .secrets/splunk.token
+
+        echo "💾 Writing token to docker/local.env..."
+        if grep -q '^SPLUNK_HEC_TOKEN=' local.env; then
+          sed -i '' "s/^SPLUNK_HEC_TOKEN=.*/SPLUNK_HEC_TOKEN=$HEC_TOKEN/" local.env
+        else
+          echo "SPLUNK_HEC_TOKEN=$HEC_TOKEN" >> local.env
+        fi
+
+        echo "✅ Done. Token updated in both local.env and .secrets/splunk.token"
