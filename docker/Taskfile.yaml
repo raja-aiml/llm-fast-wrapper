@@ -3,17 +3,18 @@ version: '3.0'
 env:
   DOCKER_ENV_FILE: ./local.env
   DOCKER_COMPOSE_FILE: docker-compose.yaml
+  COMMON_FLAGS: --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}}
 
 tasks:
   up:
     desc: "Start all services"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -profile splunk --profile pgvector --profile pgadmin --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} up -d --build
+      - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus up -d --build
 
   down:
     desc: "Stop all services and remove containers"
     cmds:
-      - docker compose  --env-file {{.DOCKER_ENV_FILE}} -profile splunk --profile pgvector --profile pgadmin --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} down --volumes --remove-orphans
+      - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus down --volumes --remove-orphans
       - docker rm $(docker ps -aq -f status=exited) || echo "No exited containers to remove."
 
   restart:
@@ -25,27 +26,27 @@ tasks:
   ps:
     desc: "List running containers"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} ps --all
+      - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus ps --all
 
   logs:
     desc: "Tail logs for all services"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -profile splunk --profile pgvector --profile pgadmin --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} logs -f
+      - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus logs -f
 
   splunk-only:
     desc: "Run only Splunk via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile splunk -f {{.DOCKER_COMPOSE_FILE}} up -d --build
+      - docker compose {{.COMMON_FLAGS}} --profile splunk up -d --build
 
   pgvector-only:
     desc: "Run only Postgres and pgAdmin via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile pgvector -f {{.DOCKER_COMPOSE_FILE}} up -d --build
+      - docker compose {{.COMMON_FLAGS}} --profile pgvector up -d --build
 
   prometheus-only:
     desc: "Run only Prometheus via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} up -d --build
+      - docker compose {{.COMMON_FLAGS}} --profile prometheus up -d --build
 
   open-splunk:
     desc: "Open Splunk UI in browser"
@@ -56,6 +57,11 @@ tasks:
     desc: "Open Prometheus UI in browser"
     cmds:
       - open http://localhost:9090
+
+  open-pgadmin:
+    desc: "Open pgAdmin UI in browser"
+    cmds:
+      - open http://localhost:5050
 
   check-health:
     desc: "Show container health status"
@@ -119,3 +125,8 @@ tasks:
         fi
 
         echo "✅ Done. Token updated in both local.env and .secrets/splunk.token"
+
+  default:
+    desc: "List all available docker tasks"
+    cmds:
+      - task --list
