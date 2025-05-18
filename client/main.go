@@ -1,29 +1,33 @@
 package main
 
 import (
-	"fmt"
-	"os"
+   "fmt"
+   "os"
 
-	"github.com/joho/godotenv"
-	"github.com/openai/openai-go"
-	"github.com/openai/openai-go/option"
-	"github.com/spf13/cobra"
+   "github.com/joho/godotenv"
+   openai "github.com/openai/openai-go"
+   "github.com/openai/openai-go/option"
+   "github.com/spf13/cobra"
+   "go.uber.org/zap"
 
-	"github.com/raja.aiml/llm-fast-wrapper/client/internal/chat"
-	"github.com/raja.aiml/llm-fast-wrapper/client/internal/help"
-	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
-	"github.com/raja.aiml/llm-fast-wrapper/internal/logging"
+   "github.com/raja.aiml/llm-fast-wrapper/client/internal/chat"
+   "github.com/raja.aiml/llm-fast-wrapper/client/internal/help"
+   "github.com/raja.aiml/llm-fast-wrapper/internal/config"
+   "github.com/raja.aiml/llm-fast-wrapper/internal/logging"
 )
 
 func main() {
-	_ = godotenv.Load()
-	logger := logging.InitLogger()
-	cfg := config.NewCLIConfig()
-
-	rootCmd := &cobra.Command{
+   _ = godotenv.Load()
+   cfg := config.NewCLIConfig()
+   var logger *zap.SugaredLogger
+   rootCmd := &cobra.Command{
 		Use:     "llm-client",
 		Short:   "CLI to interact with OpenAI-compatible LLM",
 		Example: help.LoadUsageMarkdown("client/internal/help/usage.md"),
+       // Initialize logger after flags are parsed
+       PersistentPreRun: func(cmd *cobra.Command, args []string) {
+           logger = logging.InitLogger(cfg.LogFile)
+       },
 		Run: func(cmd *cobra.Command, args []string) {
 			apiKey := os.Getenv("OPENAI_API_KEY")
 			if apiKey == "" {
@@ -57,9 +61,14 @@ func main() {
 
 	rootCmd.AddCommand(helpCommand())
 
-	if err := rootCmd.Execute(); err != nil {
-		logger.Fatalf("Command execution failed: %v", err)
-	}
+   if err := rootCmd.Execute(); err != nil {
+       if logger != nil {
+           logger.Fatalf("Command execution failed: %v", err)
+       } else {
+           fmt.Fprintln(os.Stderr, err)
+           os.Exit(1)
+       }
+   }
 }
 
 func helpCommand() *cobra.Command {
