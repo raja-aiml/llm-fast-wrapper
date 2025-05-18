@@ -48,3 +48,41 @@ func TestLogAuditWritesJSONEntry(t *testing.T) {
    _, err = time.Parse(time.RFC3339, ts)
    require.NoError(t, err)
 }
+// captureStderr redirects stderr and returns captured output.
+func captureStderr(f func()) string {
+   old := os.Stderr
+   r, w, _ := os.Pipe()
+   os.Stderr = w
+   f()
+   w.Close()
+   var buf bytes.Buffer
+   io.Copy(&buf, r)
+   os.Stderr = old
+   return buf.String()
+}
+
+func TestLogAuditMarshalError(t *testing.T) {
+   orig := jsonMarshal
+   defer func() { jsonMarshal = orig }()
+   jsonMarshal = func(v any) ([]byte, error) {
+       return nil, fmt.Errorf("marshal fail")
+   }
+   cfg := &config.CLIConfig{Model: "test", LogFile: ""}
+   out := captureStderr(func() {
+       LogAudit("p", "r", cfg)
+   })
+   require.Contains(t, out, "Failed to marshal audit entry")
+}
+
+func TestLogAuditOpenFileError(t *testing.T) {
+   orig := openFile
+   defer func() { openFile = orig }()
+   openFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
+       return nil, fmt.Errorf("open fail")
+   }
+   cfg := &config.CLIConfig{Model: "test", LogFile: "dummy.log"}
+   out := captureStderr(func() {
+       LogAudit("p", "r", cfg)
+   })
+   require.Contains(t, out, "Failed to open audit log file")
+}
