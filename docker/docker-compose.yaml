@@ -1,34 +1,31 @@
-version: '3.8'
+version: "3.9"
+
 services:
   postgres:
-    image: pgvector/pgvector:pg17
-    environment:
-      POSTGRES_USER: llm
-      POSTGRES_PASSWORD: llm
-      POSTGRES_DB: llmlogs
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U llm -d llmlogs"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    extends:
+      file: tools/pgvector.yaml
+      service: postgres
+
+  pgadmin:
+    extends:
+      file: tools/pgvector.yaml
+      service: pgadmin
+
+  splunk:
+    extends:
+      file: tools/splunk.yaml
+      service: splunk
 
   prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.55
-    ports:
-      - "16686:16686"
-      - "4317:4317"
-      - "4318:4318"
+    extends:
+      file: tools/prometheus.yaml
+      service: prometheus
 
 volumes:
   pgdata:
+  pgadmin-data:
+  splunk-data:
+
+networks:
+  observability:
+    driver: bridge

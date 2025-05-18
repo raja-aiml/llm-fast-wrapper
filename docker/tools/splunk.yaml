@@ -1,0 +1,24 @@
+services:
+  splunk:
+    image: splunk/splunk:latest
+    platform: linux/amd64
+    container_name: splunk
+    env_file:
+      - docker/local.env
+    environment:
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD}
+    ports:
+      - "8000:8000"
+      - "8088:8088"
+      - "9997:9997"
+    volumes:
+      - splunk-data:/opt/splunk/var
+    command: >
+      bash -c "
+        /sbin/entrypoint.sh start &&
+        /opt/splunk/bin/splunk enable listen 9997 -auth 'admin:${SPLUNK_PASSWORD}' &&
+        /opt/splunk/bin/splunk http-event-collector enable -auth 'admin:${SPLUNK_PASSWORD}'
+      "
+    networks:
+      - observability

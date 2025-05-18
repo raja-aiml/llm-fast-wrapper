@@ -1,0 +1,47 @@
+version: '3'
+
+env:
+  DOCKER_ENV_FILE: local.env
+  DOCKER_COMPOSE_FILE: docker-compose.yaml
+
+tasks:
+  up:
+    desc: "Start all services"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} up -d --build
+
+  down:
+    desc: "Stop all services and remove containers"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} down
+
+  restart:
+    desc: "Rebuild and restart all services"
+    cmds:
+      - task: down
+      - task: up
+
+  ps:
+    desc: "List running containers"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} ps
+
+  logs:
+    desc: "Tail logs for all services"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} logs -f
+
+  splunk-only:
+    desc: "Run only Splunk service"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f splunk.yaml up -d --build
+
+  pgvector-only:
+    desc: "Run only Postgres and pgAdmin services"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f pgvector.yaml up -d --build
+
+  prometheus-only:
+    desc: "Run only Prometheus service"
+    cmds:
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f prometheus.yaml up -d --build
