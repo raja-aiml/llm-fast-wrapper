@@ -243,13 +243,7 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-### VisualStudioCode ###
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
+
 
 # Local History for Visual Studio Code
 .history/
@@ -288,6 +282,14 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+### VisualStudioCode ###
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
 # End of https://www.toptal.com/developers/gitignore/api/python,go,visualstudiocode,macos,linux,windows
 
 
@@ -298,7 +300,6 @@ llm-fast-wrapper
 *.out
 
 # IDE
-.vscode/
 .idea/
 
 # Dependency directories
@@ -310,3 +311,4 @@ vendor/
 # Python cache
 __pycache__/
 logs/*.log
+

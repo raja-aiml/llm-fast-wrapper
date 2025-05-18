@@ -1,6 +1,7 @@
 package embeddings
 
 import (
+	_ "embed" // for embedding SQL
 	"fmt"
 	"strings"
 
@@ -8,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-//go:embed migrations.sql
+//go:embed scripts/migrations.sql
 var migrationSQLTemplate string
 
 // MigrateWithGORM applies SQL migrations to set up pgvector and embeddings table/index.

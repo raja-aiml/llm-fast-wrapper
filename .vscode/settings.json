@@ -1,0 +1,4 @@
+{
+  // Automatically apply the 'integration' build tag when running tests
+  "go.testTags": "integration"
+}
