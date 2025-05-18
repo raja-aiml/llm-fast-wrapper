@@ -1,7 +1,7 @@
 version: '3.0'
 
 env:
-  DOCKER_ENV_FILE: ../local.env
+  DOCKER_ENV_FILE: ./local.env
   DOCKER_COMPOSE_FILE: docker-compose.yaml
 
 tasks:
@@ -13,7 +13,8 @@ tasks:
   down:
     desc: "Stop all services and remove containers"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} down
+      - docker compose  --env-file {{.DOCKER_ENV_FILE}} -f {{.DOCKER_COMPOSE_FILE}} down --volumes --remove-orphans
+      - docker rm $(docker ps -aq -f status=exited) || echo "No exited containers to remove."
 
   restart:
     desc: "Rebuild and restart all services"
@@ -34,17 +35,17 @@ tasks:
   splunk-only:
     desc: "Run only Splunk via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile splunk up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile splunk -f {{.DOCKER_COMPOSE_FILE}} up -d --build
 
   pgvector-only:
-    desc: "Run only Postgres and pgAdmin services"
+    desc: "Run only Postgres and pgAdmin via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f tools/pgvector.yaml up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile pgvector -f {{.DOCKER_COMPOSE_FILE}} up -d --build
 
   prometheus-only:
-    desc: "Run only Prometheus service"
+    desc: "Run only Prometheus via profile"
     cmds:
-      - docker compose --env-file {{.DOCKER_ENV_FILE}} -f tools/prometheus.yaml up -d --build
+      - docker compose --env-file {{.DOCKER_ENV_FILE}} --profile prometheus -f {{.DOCKER_COMPOSE_FILE}} up -d --build
 
   open-splunk:
     desc: "Open Splunk UI in browser"

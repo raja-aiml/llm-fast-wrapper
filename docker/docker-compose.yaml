@@ -1,27 +1,21 @@
-
 services:
   postgres:
     extends:
       file: tools/pgvector.yaml
       service: postgres
-      env_file:
-        - local.env
     profiles: ["pgvector"]
 
   pgadmin:
     extends:
       file: tools/pgvector.yaml
       service: pgadmin
-    profiles: ["pgadmin"]
+    profiles: ["pgvector"]
 
   splunk:
     extends:
       file: tools/splunk.yaml
       service: splunk
-      env_file:
-        - local.env
     profiles: ["splunk"]
-
 
   prometheus:
     extends:

@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "pgvector",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "llmlogs",
+      "Username": "llm",
+      "SSLMode": "prefer"
+    }
+  }
+}
