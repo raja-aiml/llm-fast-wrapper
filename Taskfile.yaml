@@ -2,5 +2,11 @@ version: '3'
 
 includes:
   docker:
-    taskfile: ./docker/Taskfile.yaml
-    dir: ./docker
+    taskfile: docker/Taskfile.yaml
+    dir: docker
+
+tasks:
+  default:
+    desc: "List all services"
+    cmds:
+      - task --list
