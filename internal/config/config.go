@@ -14,6 +14,8 @@ type CLIConfig struct {
 	Markdown    bool
 	Stream      bool
 	BaseURL     string
+	Output      string // json, yaml, text, markdown
+	LogFile     string // Optional log file path
 }
 
 func NewCLIConfig() *CLIConfig {

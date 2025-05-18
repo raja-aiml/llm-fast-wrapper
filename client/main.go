@@ -52,6 +52,8 @@ func main() {
 	rootCmd.Flags().BoolVar(&cfg.Markdown, "markdown", false, "Render output in Markdown")
 	rootCmd.Flags().BoolVar(&cfg.Stream, "stream", false, "Enable streaming response (set true to stream)")
 	rootCmd.Flags().StringVar(&cfg.BaseURL, "base-url", "", "Custom OpenAI-compatible base URL")
+	rootCmd.Flags().StringVar(&cfg.Output, "output", "text", "Output format: text, markdown, json, yaml")
+	rootCmd.Flags().StringVar(&cfg.LogFile, "log-file", "llm-client.log", "Path to log file for prompts/responses")
 
 	rootCmd.AddCommand(helpCommand())
 

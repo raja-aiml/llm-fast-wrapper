@@ -1,19 +1,20 @@
 package chat
 
 import (
-	"bufio"
-	"context"
-	"fmt"
-	"os"
-	"strings"
+   "bufio"
+   "context"
+   "fmt"
+   "os"
+   "strings"
 
-	"github.com/charmbracelet/glamour"
-	"github.com/charmbracelet/lipgloss"
-	openai "github.com/openai/openai-go"
-	"go.uber.org/zap"
+   "github.com/charmbracelet/glamour"
+   "github.com/charmbracelet/lipgloss"
+   openai "github.com/openai/openai-go"
+   "go.uber.org/zap"
 
-	"github.com/raja.aiml/llm-fast-wrapper/client/internal/ui"
-	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
+   "github.com/raja.aiml/llm-fast-wrapper/client/internal/audit"
+   "github.com/raja.aiml/llm-fast-wrapper/client/internal/ui"
+   "github.com/raja.aiml/llm-fast-wrapper/internal/config"
 )
 
 func RunQuery(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLogger) {
@@ -70,8 +71,8 @@ func runSync(client *openai.Client, cfg *config.CLIConfig, logger *zap.SugaredLo
 		return
 	}
 
-	content := resp.Choices[0].Message.Content
-	printResponse(content, cfg.Markdown)
+		content := resp.Choices[0].Message.Content
+		audit.PrintResponse(content, cfg)
 	logger.Debugf("Response length: %d characters", len(content))
 }
 
@@ -107,13 +108,14 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 	logger.Debugf("Streaming response length: %d characters", len(fullText))
 }
 
-func printResponse(content string, markdown bool) {
-	fmt.Println(lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("33")).Render("Assistant:"))
-	if markdown {
-		renderMarkdown(content)
-	} else {
-		fmt.Println(content)
+
+func RenderMarkdown(content string) {
+	if strings.TrimSpace(content) == "" {
+		fmt.Println("No content to render.")
+		return
 	}
+
+	renderMarkdown(content)
 }
 
 func renderMarkdown(text string) {
