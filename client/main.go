@@ -67,7 +67,7 @@ func helpCommand() *cobra.Command {
 		Use:   "help",
 		Short: "Show full Markdown-based usage guide",
 		Run: func(cmd *cobra.Command, args []string) {
-			md := help.LoadUsageMarkdown("client/help/usage.md")
+			md := help.LoadUsageMarkdown("client/internal/help/usage.md")
 			fmt.Println(md)
 		},
 	}
