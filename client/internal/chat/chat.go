@@ -104,8 +104,10 @@ func runStreaming(client *openai.Client, cfg *config.CLIConfig, logger *zap.Suga
 		logger.Fatalf("Streaming error: %v", err)
 	}
 
-	fmt.Println()
-	logger.Debugf("Streaming response length: %d characters", len(fullText))
+   fmt.Println()
+   // Audit the full streaming response
+   audit.LogAudit(cfg.Query, fullText, cfg)
+   logger.Debugf("Streaming response length: %d characters", len(fullText))
 }
 
 

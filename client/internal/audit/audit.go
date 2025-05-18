@@ -50,10 +50,12 @@ func PrintResponse(content string, cfg *config.CLIConfig) {
 		fmt.Println(content)
 	}
 
-	logAudit(cfg.Query, content, cfg)
+	// Record prompt and response to audit log
+	LogAudit(cfg.Query, content, cfg)
 }
 
-func logAudit(prompt, response string, cfg *config.CLIConfig) {
+// LogAudit appends an audit entry (prompt and response) to the configured log file.
+func LogAudit(prompt, response string, cfg *config.CLIConfig) {
 	entry := map[string]any{
 		"time":     time.Now().Format(time.RFC3339),
 		"model":    cfg.Model,
