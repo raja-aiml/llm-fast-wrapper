@@ -12,6 +12,7 @@ import (
 )
 
 // Service encapsulates the embedding functionality, providing a unified API
+// This consolidates functionality from both the original Service and Fetcher
 type Service struct {
 	provider api.Provider
 	store    storage.VectorStore
@@ -86,17 +87,13 @@ func (s *Service) Get(ctx context.Context, text string) ([]float32, error) {
 func (s *Service) GetBatch(ctx context.Context, texts []string) (map[string][]float32, error) {
 	result := make(map[string][]float32)
 	var uncachedTexts []string
-	// Remove the unused slice
-	// var uncachedIndices []int  <- This was unused
 
 	// Check cache first
-	for _, text := range texts { // Changed 'i, text' to just 'text' since we don't use 'i'
+	for _, text := range texts {
 		if cached, found := s.cache.Get(text); found {
 			result[text] = cached
 		} else {
 			uncachedTexts = append(uncachedTexts, text)
-			// Remove the unused append
-			// uncachedIndices = append(uncachedIndices, i)  <- This was unused
 		}
 	}
 
@@ -145,6 +142,7 @@ func (s *Service) GetCacheSize() int {
 }
 
 // CosineSimilarity calculates the cosine similarity between two embedding vectors
+// This is now just a proxy to the central implementation
 func (s *Service) CosineSimilarity(vec1, vec2 []float32) float32 {
 	return api.CosineSimilarity(vec1, vec2)
 }
