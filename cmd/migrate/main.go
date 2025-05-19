@@ -6,7 +6,7 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/storage/postgres"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +60,7 @@ func DropCmd() *cobra.Command {
 // runMigrate applies the embedded migration script
 func runMigrate() {
 	fmt.Println("🔧 Running migration with dimension:", dbDim)
-	if err := embeddings.MigrateWithGORM(dbDSN, dbDim); err != nil {
+	if err := postgres.MigrateWithGORM(dbDSN, dbDim); err != nil {
 		fmt.Fprintf(os.Stderr, "❌ Migration failed: %v\n", err)
 		os.Exit(1)
 	}

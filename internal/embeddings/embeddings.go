@@ -1,30 +1,26 @@
 package embeddings
 
 import (
-   "context"
-   "errors"
-   "os"
-   "sync"
-   "time"
-   "math"
+	"context"
+	"errors"
+	"math"
+	"os"
+	"sync"
+	"time"
 
-   "github.com/raja.aiml/llm-fast-wrapper/internal/config"
-   openai "github.com/openai/openai-go"
+	openai "github.com/openai/openai-go"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/config"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/cache"
 )
 
-// Cache for storing text embeddings to minimize API calls
-type embeddingCache struct {
-	cache map[string][]float32
-	mutex sync.RWMutex
-}
-
-// Global embedding cache
+// Global variables for the package
 var (
-   cache        = embeddingCache{cache: make(map[string][]float32)}
-   client       *openai.Client
-   defaultModel = openai.EmbeddingModelTextEmbeddingAda002
-   initOnce     sync.Once
-   initErr      error
+	client       *openai.Client
+	defaultModel = openai.EmbeddingModelTextEmbeddingAda002
+	initOnce     sync.Once
+	initErr      error
+	// Create a global cache instance
+	globalCache = cache.NewCache()
 )
 
 // EmbeddingResult represents the result of an embedding operation
@@ -42,9 +38,9 @@ func initClient() error {
 			return
 		}
 
-       // Create the OpenAI client using internal config
-       c := config.NewClient(apiKey, "")
-       client = &c
+		// Create the OpenAI client using internal config
+		c := config.NewClient(apiKey, "")
+		client = &c
 	})
 	return initErr
 }
@@ -56,9 +52,7 @@ func GetEmbedding(text string, modelName string) ([]float32, error) {
 	}
 
 	// Check if we have a cached embedding
-	cache.mutex.RLock()
-	cachedEmbedding, found := cache.cache[text]
-	cache.mutex.RUnlock()
+	cachedEmbedding, found := globalCache.Get(text)
 	if found {
 		return cachedEmbedding, nil
 	}
@@ -72,31 +66,29 @@ func GetEmbedding(text string, modelName string) ([]float32, error) {
 		modelName = defaultModel
 	}
 
-   // Prepare request parameters for embedding
-   params := openai.EmbeddingNewParams{
-       Input: openai.EmbeddingNewParamsInputUnion{
-           OfArrayOfStrings: []string{text},
-       },
-       Model: modelName,
-   }
-   // Call the OpenAI Embedding API
-   res, err := client.Embeddings.New(ctx, params)
-   if err != nil {
-       return nil, err
-   }
-   if len(res.Data) == 0 {
-       return nil, errors.New("no embedding returned from API")
-   }
-   // Convert embedding from float64 to float32 and cache it
-   raw := res.Data[0].Embedding
-   embedding := make([]float32, len(raw))
-   for i, v := range raw {
-       embedding[i] = float32(v)
-   }
-   cache.mutex.Lock()
-   cache.cache[text] = embedding
-   cache.mutex.Unlock()
-   return embedding, nil
+	// Prepare request parameters for embedding
+	params := openai.EmbeddingNewParams{
+		Input: openai.EmbeddingNewParamsInputUnion{
+			OfArrayOfStrings: []string{text},
+		},
+		Model: modelName,
+	}
+	// Call the OpenAI Embedding API
+	res, err := client.Embeddings.New(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Data) == 0 {
+		return nil, errors.New("no embedding returned from API")
+	}
+	// Convert embedding from float64 to float32 and cache it
+	raw := res.Data[0].Embedding
+	embedding := make([]float32, len(raw))
+	for i, v := range raw {
+		embedding[i] = float32(v)
+	}
+	globalCache.Set(text, embedding)
+	return embedding, nil
 }
 
 // GetEmbeddingsBatch gets embeddings for multiple texts in parallel
@@ -166,10 +158,9 @@ func CosineSimilarity(vec1, vec2 []float32) float32 {
 		return 0
 	}
 
-   // Compute cosine similarity: dot(vec1,vec2)/(||vec1||*||vec2||)
-   return dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
+	// Compute cosine similarity: dot(vec1,vec2)/(||vec1||*||vec2||)
+	return dotProduct / (float32(math.Sqrt(float64(norm1))) * float32(math.Sqrt(float64(norm2))))
 }
-
 
 // SetDefaultModel changes the default embedding model
 func SetDefaultModel(model string) {
@@ -178,21 +169,16 @@ func SetDefaultModel(model string) {
 
 // ClearCache clears the embedding cache
 func ClearCache() {
-   cache.mutex.Lock()
-   defer cache.mutex.Unlock()
-   cache.cache = make(map[string][]float32)
+	globalCache.Clear()
 }
+
 // GetCachedEmbedding returns the embedding for the given text from the in-memory cache.
 // The boolean indicates whether the embedding was found.
 func GetCachedEmbedding(text string) ([]float32, bool) {
-   cache.mutex.RLock()
-   defer cache.mutex.RUnlock()
-   emb, ok := cache.cache[text]
-   return emb, ok
+	return globalCache.Get(text)
 }
+
 // SetCachedEmbedding stores the embedding for the given text in the in-memory cache.
 func SetCachedEmbedding(text string, embedding []float32) {
-   cache.mutex.Lock()
-   defer cache.mutex.Unlock()
-   cache.cache[text] = embedding
+	globalCache.Set(text, embedding)
 }
