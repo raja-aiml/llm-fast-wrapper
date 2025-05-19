@@ -3,7 +3,6 @@ package fiberapi
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
