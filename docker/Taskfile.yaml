@@ -17,6 +17,17 @@ tasks:
       - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus down --volumes --remove-orphans
       - docker ps -aq -f status=exited | xargs -r docker rm || echo "No exited containers to remove."
 
+  db:up:
+    desc: "Start all services"
+    cmds:
+      - docker compose {{.COMMON_FLAGS}}  --profile pgvector --profile pgadmin  up -d --build
+
+  db:down:
+    desc: "Stop all services and remove containers"
+    cmds:
+      - docker compose {{.COMMON_FLAGS}}  --profile pgvector --profile pgadmin  down --volumes --remove-orphans
+      - docker ps -aq -f status=exited | xargs -r docker rm || echo "No exited containers to remove."
+
   restart:
     desc: "Rebuild and restart all services"
     cmds:
@@ -32,21 +43,6 @@ tasks:
     desc: "Tail logs for all services"
     cmds:
       - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus logs -f
-
-  splunk-only:
-    desc: "Run only Splunk via profile"
-    cmds:
-      - docker compose {{.COMMON_FLAGS}} --profile splunk up -d --build
-
-  pgvector-only:
-    desc: "Run only Postgres and pgAdmin via profile"
-    cmds:
-      - docker compose {{.COMMON_FLAGS}} --profile pgvector up -d --build
-
-  prometheus-only:
-    desc: "Run only Prometheus via profile"
-    cmds:
-      - docker compose {{.COMMON_FLAGS}} --profile prometheus up -d --build
 
   open-splunk:
     desc: "Open Splunk UI in browser"
@@ -69,64 +65,3 @@ tasks:
       - |
         docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E 'postgres|pgadmin|splunk|prometheus' || echo "No containers found"
 
-  init-splunk-token:
-    desc: "Show Splunk login instructions with real password"
-    cmds:
-      - |
-        echo ""
-        echo "📘 Open Splunk UI at http://localhost:8000"
-        echo "🔐 Login: admin / ${SPLUNK_PASSWORD}"
-        echo "➕ Go to: Settings > Data Inputs > HTTP Event Collector > New Token"
-        echo "➡️ Name it: llm-fast-wrapper"
-        echo "✔️ Enable indexer acknowledgement and set index to: main"
-        echo ""
-
-  create-splunk-token:
-    desc: "Create or reuse Splunk HEC token and store in local.env and .secrets"
-    cmds:
-      - |
-        echo "🔐 Authenticating to Splunk..."
-        TOKEN=$(curl -ksu admin:${SPLUNK_PASSWORD} https://localhost:8089/services/auth/login \
-          -d username=admin -d password=${SPLUNK_PASSWORD} \
-          | grep -oPm1 "(?<=<sessionKey>)[^<]+")
-
-        if [ -z "$TOKEN" ]; then
-          echo "❌ Failed to get session token. Is Splunk running at https://localhost:8089?"
-          exit 1
-        fi
-
-        echo "🔎 Checking if HEC token exists..."
-        if curl -ks https://localhost:8089/services/data/inputs/http/llm-fast-wrapper \
-            -H "Authorization: Splunk $TOKEN" | grep -q "<token>"; then
-          echo "✅ Token already exists. Reusing existing token..."
-        else
-          echo "➕ Creating new HEC token..."
-          curl -ks -X POST https://localhost:8089/services/data/inputs/http \
-            -H "Authorization: Splunk $TOKEN" \
-            -d name=llm-fast-wrapper \
-            -d index=main \
-            -d sourcetype=manual \
-            -d disabled=false \
-            -d useACK=true
-        fi
-
-        echo "📦 Retrieving token value..."
-        HEC_TOKEN=$(curl -ks https://localhost:8089/services/data/inputs/http/llm-fast-wrapper \
-            -H "Authorization: Splunk $TOKEN" | grep -oPm1 "(?<=<token>)[^<]+")
-
-        echo "💾 Writing token to docker/.secrets/splunk.token..."
-        echo "$HEC_TOKEN" > .secrets/splunk.token
-
-        echo "💾 Writing token to docker/local.env..."
-        if grep -q '^SPLUNK_HEC_TOKEN=' local.env; then
-          sed -i '' "s/^SPLUNK_HEC_TOKEN=.*/SPLUNK_HEC_TOKEN=$HEC_TOKEN/" local.env
-        else
-          echo "SPLUNK_HEC_TOKEN=$HEC_TOKEN" >> local.env
-        fi
-
-        echo "✅ Done. Token updated in both local.env and .secrets/splunk.token"
-
-  default:
-    desc: "List all available docker tasks"
-    cmds:
-      - task --list
