@@ -48,30 +48,26 @@ func NewPostgresStore(dsn string, dimension int) (*PostgresStore, error) {
 	}
 	pgLogger.Info("pgvector extension ensured")
 
-	// Use only for dev: Drop existing table (make this configurable in future)
-	pgLogger.Warn("Dropping existing embeddings table (development mode only)")
-	if _, err := db.Exec(`DROP TABLE IF EXISTS embeddings`); err != nil {
-		return nil, fmt.Errorf("drop embeddings: %w", err)
-	}
+   // Ensure embeddings table exists with the correct vector dimension
+   createTable := fmt.Sprintf(
+       `CREATE TABLE IF NOT EXISTS embeddings (
+           text TEXT PRIMARY KEY,
+           embedding vector(%d)
+       );`, dimension)
+   if _, err := db.Exec(createTable); err != nil {
+       return nil, fmt.Errorf("ensure embeddings table: %w", err)
+   }
+   pgLogger.Infof("Ensured embeddings table with dimension=%d", dimension)
 
-	createTable := fmt.Sprintf(`
-		CREATE TABLE embeddings (
-			text TEXT PRIMARY KEY,
-			embedding vector(%d)
-		);`, dimension)
-	if _, err := db.Exec(createTable); err != nil {
-		return nil, fmt.Errorf("create table: %w", err)
-	}
-	pgLogger.Infof("Created embeddings table with dimension=%d", dimension)
-
-	indexQuery := `
-		CREATE INDEX IF NOT EXISTS idx_embeddings_embedding
-		ON embeddings USING ivfflat (embedding vector_cosine_ops)
-		WITH (lists = 100);`
-	if _, err := db.Exec(indexQuery); err != nil {
-		return nil, fmt.Errorf("create index: %w", err)
-	}
-	pgLogger.Info("Created ivfflat index on embeddings")
+   // Ensure ivfflat index exists on the embeddings column
+   indexQuery := `
+       CREATE INDEX IF NOT EXISTS idx_embeddings_embedding
+       ON embeddings USING ivfflat (embedding vector_cosine_ops)
+       WITH (lists = 100);`
+   if _, err := db.Exec(indexQuery); err != nil {
+       return nil, fmt.Errorf("ensure embeddings index: %w", err)
+   }
+   pgLogger.Info("Ensured ivfflat index on embeddings")
 
 	return &PostgresStore{db: db, dimension: dimension}, nil
 }
