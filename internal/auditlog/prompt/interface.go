@@ -1,4 +1,4 @@
-package promptlog
+package prompt
 
 import "time"
 

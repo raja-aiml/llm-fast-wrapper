@@ -1,19 +1,19 @@
-package promptlog_test
+package prompt_test
 
 import (
 	"testing"
 	"time"
 
-	"github.com/raja.aiml/llm-fast-wrapper/internal/promptlog"
+	prompt "github.com/raja.aiml/llm-fast-wrapper/internal/auditlog/prompt"
 )
 
 func TestMemoryLogger_LogPrompt(t *testing.T) {
-	logger := promptlog.NewMemoryLogger()
+	logger := prompt.NewMemoryLogger()
 	if err := logger.LogPrompt("prompt1", "token1", time.Now()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ml, ok := logger.(*promptlog.MemoryLogger)
+	ml, ok := logger.(*prompt.MemoryLogger)
 	if !ok {
 		t.Fatalf("expected *MemoryLogger type")
 	}
@@ -24,12 +24,12 @@ func TestMemoryLogger_LogPrompt(t *testing.T) {
 }
 
 func TestMemoryLogger_LogResponse(t *testing.T) {
-	logger := promptlog.NewMemoryLogger()
+	logger := prompt.NewMemoryLogger()
 	if err := logger.LogResponse("prompt2", "response2", "token2", time.Now()); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	ml, ok := logger.(*promptlog.MemoryLogger)
+	ml, ok := logger.(*prompt.MemoryLogger)
 	if !ok {
 		t.Fatalf("expected *MemoryLogger type")
 	}
