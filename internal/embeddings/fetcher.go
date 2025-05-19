@@ -21,17 +21,14 @@ func NewFetcher(store VectorStore) *Fetcher {
 var logger *zap.SugaredLogger
 
 func init() {
-	// Initialize a dedicated logger for embedding fetch operations
-	// Write logs only to the embeddings-fetcher-error log file (no console output)
 	logger = logging.InitLogger("logs/embeddings-fetcher.log")
+	logger.Debug("Initialized embedding fetcher logger")
 }
 
-// Get retrieves the embedding for the given text using a three-tier lookup:
-// 1. In-memory cache
-// 2. pgvector store (if configured)
-// 3. OpenAI API fallback, persisting to cache and store
+// Get retrieves the embedding for the given text using a three-tier lookup
 func (f *Fetcher) Get(ctx context.Context, text string) ([]float32, error) {
 	logger.Debugf("Fetching embedding for text: %q", text)
+
 	// 1. In-memory cache
 	if cached, ok := GetCachedEmbedding(text); ok {
 		logger.Debugf("Cache hit for text: %q", text)
@@ -39,46 +36,44 @@ func (f *Fetcher) Get(ctx context.Context, text string) ([]float32, error) {
 	}
 	logger.Infof("Cache miss for text: %q", text)
 
-	// 2. Attempt to load from pgvector store, if configured
+	// 2. Attempt pgvector store fetch
 	if f.store != nil {
-		logger.Debugf("Attempting to load embedding for %q from pgvector store", text)
+		logger.Debugf("Attempting pgvector retrieval for text: %q", text)
 		vec, err := f.store.Get(ctx, text)
 		if err == nil {
-			logger.Infof("Loaded embedding for %q from pgvector store", text)
 			SetCachedEmbedding(text, vec)
+			logger.Infof("Embedding loaded from pgvector for %q", text)
 			return vec, nil
 		}
 		if err != sql.ErrNoRows {
-			logger.Errorf("Error retrieving embedding for %q from pgvector store: %v", text, err)
-			return nil, err
+			logger.Warnf("pgvector retrieval failed for %q: %v", text, err)
+		} else {
+			logger.Infof("No pgvector record found for %q", text)
 		}
-		logger.Infof("No pgvector embedding found for %q; generating via API", text)
-	} else {
-		logger.Debugf("No pgvector store configured; will generate embedding for %q via API", text)
 	}
 
-	// 3. Generate embedding via OpenAI API
-	logger.Debugf("Generating embedding via OpenAI API for %q", text)
+	// 3. Fallback to OpenAI embedding
+	logger.Debugf("Calling OpenAI API for embedding generation: %q", text)
 	vec, err := GetEmbedding(text, "")
 	if err != nil {
-		logger.Errorf("Failed to generate embedding via OpenAI API for %q: %v", text, err)
+		logger.Errorf("OpenAI embedding failed for %q: %v", text, err)
 		return nil, err
 	}
-	logger.Infof("Generated embedding via OpenAI API for %q", text)
+	logger.Infof("Successfully generated embedding for %q", text)
 
-	// 4. Store in in-memory cache
+	// Cache it
 	SetCachedEmbedding(text, vec)
-	logger.Debugf("Stored embedding in cache for %q", text)
+	logger.Debugf("Cached embedding in memory for %q", text)
 
-	// 5. Persist to pgvector store, if configured
+	// Persist to store
 	if f.store != nil {
-		logger.Debugf("Persisting embedding for %q to pgvector store", text)
+		logger.Debugf("Persisting embedding to pgvector for %q", text)
 		if perr := f.store.Store(ctx, text, vec); perr != nil {
-			logger.Errorf("Failed to persist embedding for %q to pgvector store: %v", text, perr)
+			logger.Warnf("Could not persist embedding for %q to pgvector store: %v", text, perr)
 		} else {
-			logger.Infof("Successfully persisted embedding for %q to pgvector store", text)
+			logger.Infof("Successfully persisted embedding for %q to pgvector", text)
 		}
 	}
-	logger.Debugf("Returning embedding for %q", text)
+
 	return vec, nil
 }
