@@ -7,6 +7,8 @@ import (
     "strings"
 
     _ "github.com/lib/pq"
+    "github.com/raja.aiml/llm-fast-wrapper/internal/logging"
+    "go.uber.org/zap"
 )
 
 // SimilarItem represents a single result from similarity search.
@@ -19,6 +21,15 @@ type SimilarItem struct {
 type PostgresStore struct {
     db        *sql.DB
     dimension int
+}
+
+var pgLogger *zap.SugaredLogger
+
+func init() {
+    // Dedicated logger for pgvector operations
+    pgLogger = logging.InitLogger("logs/pgvector.log")
+    defer pgLogger.Sync()
+    pgLogger.Debug("Initialized pgvector logger")
 }
 
 // NewPostgresStore opens a PostgreSQL connection, ensures pgvector extension,
@@ -57,25 +68,39 @@ func NewPostgresStore(dsn string, dimension int) (*PostgresStore, error) {
 // Store upserts the embedding for the given text.
 func (s *PostgresStore) Store(ctx context.Context, text string, embedding []float32) error {
     vectorLiteral := toVectorLiteral(embedding)
+    pgLogger.Debugf("Upserting embedding for text %q into pgvector (dimension=%d)", text, s.dimension)
     upsert := `
 INSERT INTO embeddings (text, embedding)
 VALUES ($1, $2::vector)
 ON CONFLICT (text) DO UPDATE SET embedding = EXCLUDED.embedding
 `
     _, err := s.db.ExecContext(ctx, upsert, text, vectorLiteral)
+    if err != nil {
+        pgLogger.Errorf("Failed to upsert embedding for text %q: %v", text, err)
+    } else {
+        pgLogger.Debugf("Successfully upserted embedding for text %q", text)
+    }
     return err
 }
 
 // Get retrieves the embedding for the given text.
 // Returns sql.ErrNoRows if not found.
 func (s *PostgresStore) Get(ctx context.Context, text string) ([]float32, error) {
+    pgLogger.Debugf("Querying embedding for text %q from pgvector (dimension=%d)", text, s.dimension)
     row := s.db.QueryRowContext(ctx,
         `SELECT embedding FROM embeddings WHERE text = $1`, text)
     var vec string
     if err := row.Scan(&vec); err != nil {
+        pgLogger.Infof("No embedding found for text %q in pgvector: %v", text, err)
         return nil, err
     }
-    return parseVectorLiteral(vec)
+    pgLogger.Debugf("Retrieved embedding for text %q from pgvector", text)
+    parsed, err := parseVectorLiteral(vec)
+    if err != nil {
+        pgLogger.Errorf("Failed to parse vector literal for text %q: %v", text, err)
+        return nil, err
+    }
+    return parsed, nil
 }
 
 // SearchByEmbedding returns the top k stored texts closest to the given embedding.
