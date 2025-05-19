@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/api"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/storage"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/storage/postgres"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/intent"
@@ -58,8 +59,12 @@ func main() {
 		logger.Infof("Connected to pgvector store: DSN=%s", *dbDSN)
 	}
 
-	// Fetcher = cache → pgvector → OpenAI
-	embedder := embeddings.NewFetcher(store)
+	// Initialize embedding service (replaces Fetcher)
+	provider, err := api.NewOpenAIProvider()
+	if err != nil {
+		logger.Fatalf("Failed to initialize OpenAI provider: %v", err)
+	}
+	embedder := embeddings.NewService(provider, store)
 
 	// Prepare context
 	ctx := context.Background()
@@ -87,7 +92,6 @@ func main() {
 			}
 		}
 		logger.Infof("Seeding complete: %d inserted/updated, %d skipped", seeded, skipped)
-		// Exit early if in seed-only mode
 		if *seedOnly {
 			return
 		}
@@ -96,14 +100,11 @@ func main() {
 	// Match: either via DB-backed search or in-memory file-based matching
 	var result *intent.MatchResult
 	if *useDB {
-		// Database-based matching using prompt_strategies table
 		psStore := store.(*postgres.PostgresStore)
-		// Compute query embedding
 		qEmb, err := embedder.Get(ctx, query)
 		if err != nil {
 			logger.Fatalf("Failed to compute embedding for query: %v", err)
 		}
-		// Search for top strategy
 		items, err := psStore.SearchStrategies(ctx, qEmb, *threshold, 1)
 		if err != nil {
 			logger.Fatalf("DB search failed: %v", err)
@@ -115,7 +116,6 @@ func main() {
 			result = &intent.MatchResult{Name: item.Name, Path: item.Path, Score: item.Similarity, Content: item.Content}
 		}
 	} else {
-		// In-memory file-based matching
 		result, err = intent.MatchBestStrategy(ctx, query, strategies, embedder, *threshold)
 		if err != nil {
 			logger.Fatalf("Match failed: %v", err)
@@ -134,10 +134,3 @@ func main() {
 	fmt.Printf("Strategy: %s\n\n%s\n", result.Path, result.Content)
 	logger.Infof("Final match: %s (score=%.4f) path=%s", result.Name, result.Score, result.Path)
 }
-
-//  go run ./cmd/intent \
-//           --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
-//           --db-dim 1536 \
-//           --dir ../prompting-strategies \
-//           --threshold 0.6 \
-//           "Explain TCP"

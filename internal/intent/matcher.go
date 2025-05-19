@@ -18,7 +18,7 @@ func MatchBestStrategy(
 	ctx context.Context,
 	query string,
 	strategies map[string]string,
-	embedder *embeddings.Fetcher,
+	embedder *embeddings.Service,
 	threshold float64,
 ) (*MatchResult, error) {
 	queryEmb, err := embeddings.GetEmbedding(query, "")
