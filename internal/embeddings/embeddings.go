@@ -178,7 +178,21 @@ func SetDefaultModel(model string) {
 
 // ClearCache clears the embedding cache
 func ClearCache() {
-	cache.mutex.Lock()
-	defer cache.mutex.Unlock()
-	cache.cache = make(map[string][]float32)
+   cache.mutex.Lock()
+   defer cache.mutex.Unlock()
+   cache.cache = make(map[string][]float32)
+}
+// GetCachedEmbedding returns the embedding for the given text from the in-memory cache.
+// The boolean indicates whether the embedding was found.
+func GetCachedEmbedding(text string) ([]float32, bool) {
+   cache.mutex.RLock()
+   defer cache.mutex.RUnlock()
+   emb, ok := cache.cache[text]
+   return emb, ok
+}
+// SetCachedEmbedding stores the embedding for the given text in the in-memory cache.
+func SetCachedEmbedding(text string, embedding []float32) {
+   cache.mutex.Lock()
+   defer cache.mutex.Unlock()
+   cache.cache[text] = embedding
 }
