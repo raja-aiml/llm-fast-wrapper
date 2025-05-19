@@ -41,3 +41,28 @@ When using the `--db-dsn` flag:
 1. The tool connects to a PostgreSQL database with pgvector extension
 2. Strategy embeddings are stored for faster retrieval
 3. The `prompt_strategies` table must exist with appropriate schema
+
+```bash
+go run cmd/migrate/main.go drop \
+             --db-dsn "postgresql://user:pass@host:5432/db?sslmode=disable"
+
+go run cmd/migrate/main.go migrate \
+                 --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
+                 --db-dim 1536
+
+go run cmd/intent/main.go \
+          --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
+          --db-dim 1536 \
+          --dir ../prompting-strategies \
+          --ext .md \
+          --seed-only
+
+go run cmd/intent/main.go \
+                 --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
+                 --db-dim 1536 \
+                 --use-db \
+                 --dir ../prompting-strategies/ \
+                 --ext .md \
+                 "Your query here"
+
+```

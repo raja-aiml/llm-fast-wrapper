@@ -25,11 +25,14 @@ func main() {
 	logger := logging.InitLogger("logs/intent.log")
 	defer func() { _ = logger.Sync() }()
 
-	// Validate args
-	if flag.NArg() < 1 {
-		logger.Fatalf("Usage: %s [options] <query>", flag.CommandLine.Name())
-	}
-	query := flag.Arg(0)
+   // Validate args: require a query unless in seed-only mode
+   var query string
+   if !*seedOnly {
+       if flag.NArg() < 1 {
+           logger.Fatalf("Usage: %s [options] <query>", flag.CommandLine.Name())
+       }
+       query = flag.Arg(0)
+   }
 
 	// Load strategies
 	strategies, paths, err := intent.LoadStrategyFiles(*dir, *ext)
