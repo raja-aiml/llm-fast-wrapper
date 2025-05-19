@@ -1,10 +1,12 @@
 -- Initialize pgvector extension
 CREATE EXTENSION IF NOT EXISTS vector;
+-- Ensure legacy embeddings table is recreated with correct dimensions
+DROP TABLE IF EXISTS embeddings;
 
 -- Create a table for storing embeddings (legacy format for backward compatibility)
 CREATE TABLE IF NOT EXISTS embeddings (
     text TEXT PRIMARY KEY,
-    embedding vector(1536)
+    embedding vector(%[1]d)
 );
 
 -- Create an index for the legacy embeddings table
@@ -18,7 +20,7 @@ CREATE TABLE IF NOT EXISTS prompt_strategies (
     name VARCHAR(255) NOT NULL UNIQUE,
     path VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
-    embedding vector(1536),  -- Using 1536 dimensions for OpenAI ada-002 embeddings
+    embedding vector(%[1]d),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -32,7 +34,7 @@ CREATE INDEX IF NOT EXISTS prompt_strategies_embedding_idx
 CREATE TABLE IF NOT EXISTS embedding_cache (
     id SERIAL PRIMARY KEY,
     text_content TEXT NOT NULL UNIQUE,
-    embedding vector(1536),
+    embedding vector(%[1]d),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -42,7 +44,7 @@ CREATE TABLE IF NOT EXISTS classification_logs (
     query TEXT NOT NULL,
     matched_strategy VARCHAR(255) NOT NULL,
     similarity_score FLOAT NOT NULL,
-    classification_method VARCHAR(50) NOT NULL, -- 'token' or 'embedding'
+    classification_method VARCHAR(50) NOT NULL,
     processing_time_ms INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -72,6 +74,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create a trigger to update the updated_at timestamp
+DROP TRIGGER IF EXISTS update_prompt_strategies_updated_at ON prompt_strategies;
 CREATE TRIGGER update_prompt_strategies_updated_at
 BEFORE UPDATE ON prompt_strategies
 FOR EACH ROW

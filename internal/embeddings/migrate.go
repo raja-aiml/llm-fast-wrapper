@@ -3,7 +3,6 @@ package embeddings
 import (
 	_ "embed" // for embedding SQL
 	"fmt"
-	"strings"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -12,24 +11,18 @@ import (
 //go:embed scripts/migrations.sql
 var migrationSQLTemplate string
 
-// MigrateWithGORM applies SQL migrations to set up pgvector and embeddings table/index.
+// MigrateWithGORM applies SQL migrations with a specified vector dimension.
 func MigrateWithGORM(dsn string, dimension int) error {
-	// Open GORM DB connection
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return fmt.Errorf("gorm open: %w", err)
 	}
-	// Format and execute embedded SQL
+
+	// Replace dimension placeholder
 	rawSQL := fmt.Sprintf(migrationSQLTemplate, dimension)
-	stmts := strings.Split(rawSQL, ";")
-	for _, stmt := range stmts {
-		s := strings.TrimSpace(stmt)
-		if s == "" {
-			continue
-		}
-		if err := db.Exec(s).Error; err != nil {
-			return fmt.Errorf("execute migration stmt '%s': %w", s, err)
-		}
+
+	if err := db.Exec(rawSQL).Error; err != nil {
+		return fmt.Errorf("execute migration scripts: %w", err)
 	}
 	return nil
 }
