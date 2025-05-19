@@ -46,14 +46,19 @@ func NewPostgresStore(dsn string, dimension int) (*PostgresStore, error) {
     if _, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS vector`); err != nil {
         return nil, err
     }
-    // Create embeddings table
+    // Ensure embeddings table has the correct vector dimension
+    // Drop existing table to avoid dimension mismatches (embeddings are a cache)
+    if _, err := db.Exec(`DROP TABLE IF EXISTS embeddings`); err != nil {
+        return nil, fmt.Errorf("failed to drop existing embeddings table: %w", err)
+    }
+    // Create embeddings table with specified vector dimension
     createTable := fmt.Sprintf(
-        `CREATE TABLE IF NOT EXISTS embeddings (
+        `CREATE TABLE embeddings (
             text TEXT PRIMARY KEY,
             embedding vector(%d)
         )`, dimension)
     if _, err := db.Exec(createTable); err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to create embeddings table: %w", err)
     }
     // Create ivfflat index on embedding column (requires pgvector 0.4+)
     if _, err := db.Exec(

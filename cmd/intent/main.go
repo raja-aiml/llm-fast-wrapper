@@ -73,3 +73,10 @@ func main() {
 	fmt.Printf("Strategy: %s\n\n%s\n", result.Path, result.Content)
 	logger.Infof("Final match: %s (score=%.4f) path=%s", result.Name, result.Score, result.Path)
 }
+
+//  go run ./cmd/intent \
+//           --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
+//           --db-dim 1536 \
+//           --dir ../prompting-strategies \
+//           --threshold 0.6 \
+//           "Explain TCP"
