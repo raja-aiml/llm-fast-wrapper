@@ -2,7 +2,7 @@ package prompt
 
 import "time"
 
-type LLMLog struct {
+type PromptLogEntry struct {
 	ID        uint      `gorm:"primaryKey"`
 	Prompt    string    `gorm:"type:text"`
 	Response  string    `gorm:"type:text"`
@@ -12,5 +12,5 @@ type LLMLog struct {
 
 type QueryableLogger interface {
 	Logger
-	GetRecentLogs(limit int) ([]LLMLog, error)
+	GetRecentLogs(limit int) ([]PromptLogEntry, error)
 }
