@@ -17,6 +17,8 @@ func main() {
 	threshold := flag.Float64("threshold", 0.5, "minimum similarity to accept")
 	dbDSN := flag.String("db-dsn", "", "Postgres DSN for pgvector store (optional)")
 	dbDim := flag.Int("db-dim", 1536, "Vector dimension for pgvector store")
+	seedOnly := flag.Bool("seed-only", false, "seed prompt_strategies table and exit (no matching)")
+	useDB := flag.Bool("use-db", false, "use database-based matching via prompt_strategies table")
 	flag.Parse()
 
 	// Logger
@@ -57,30 +59,63 @@ func main() {
 	// Prepare context
 	ctx := context.Background()
 
-	// If using PostgresStore, upsert each strategy into prompt_strategies table
-	if psStore, ok := store.(*embeddings.PostgresStore); ok && psStore != nil {
-		for name, content := range strategies {
-			path := paths[name]
-			// Compute or retrieve embedding
-			vec, err := embedder.Get(ctx, content)
-			if err != nil {
-				logger.Errorf("Failed to compute embedding for strategy %q: %v", name, err)
-				continue
-			}
-			// Upsert into prompt_strategies
-			if err := psStore.UpsertStrategy(ctx, name, path, content, vec); err != nil {
-				logger.Errorf("Failed to upsert strategy %q: %v", name, err)
-			} else {
-				logger.Infof("Upserted strategy %q into prompt_strategies table", name)
-			}
-		}
-	}
+   // If using PostgresStore, seed prompt_strategies (and optionally exit)
+   if psStore, ok := store.(*embeddings.PostgresStore); ok && psStore != nil {
+       var seeded, skipped int64
+       for name, content := range strategies {
+           path := paths[name]
+           // Compute or retrieve embedding
+           vec, err := embedder.Get(ctx, content)
+           if err != nil {
+               logger.Errorf("Failed to compute embedding for strategy %q: %v", name, err)
+               continue
+           }
+           // Upsert into prompt_strategies
+           affected, err := psStore.UpsertStrategy(ctx, name, path, content, vec)
+           if err != nil {
+               logger.Errorf("Failed to upsert strategy %q: %v", name, err)
+           } else if affected > 0 {
+               seeded++
+               logger.Debugf("Strategy %q seeded/updated", name)
+           } else {
+               skipped++
+           }
+       }
+       logger.Infof("Seeding complete: %d inserted/updated, %d skipped", seeded, skipped)
+       // Exit early if in seed-only mode
+       if *seedOnly {
+           return
+       }
+   }
 
-	// Match
-	result, err := intent.MatchBestStrategy(ctx, query, strategies, embedder, *threshold)
-	if err != nil {
-		logger.Fatalf("Match failed: %v", err)
-	}
+   // Match: either via DB-backed search or in-memory file-based matching
+   var result *intent.MatchResult
+   if *useDB {
+       // Database-based matching using prompt_strategies table
+       psStore := store.(*embeddings.PostgresStore)
+       // Compute query embedding
+       qEmb, err := embedder.Get(ctx, query)
+       if err != nil {
+           logger.Fatalf("Failed to compute embedding for query: %v", err)
+       }
+       // Search for top strategy
+       items, err := psStore.SearchStrategies(ctx, qEmb, *threshold, 1)
+       if err != nil {
+           logger.Fatalf("DB search failed: %v", err)
+       }
+       if len(items) == 0 {
+           result = &intent.MatchResult{Name: "Default Strategy", Path: "built-in", Score: 0.0, Content: intent.DefaultStrategy}
+       } else {
+           item := items[0]
+           result = &intent.MatchResult{Name: item.Name, Path: item.Path, Score: item.Similarity, Content: item.Content}
+       }
+   } else {
+       // In-memory file-based matching
+       result, err = intent.MatchBestStrategy(ctx, query, strategies, embedder, *threshold)
+       if err != nil {
+           logger.Fatalf("Match failed: %v", err)
+       }
+   }
 
 	// Use `paths` map to get file path
 	if path, ok := paths[result.Name]; ok {

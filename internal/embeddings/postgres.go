@@ -146,11 +146,48 @@ func (s *PostgresStore) SearchByEmbedding(ctx context.Context, embedding []float
 	return items, nil
 }
 
+// StrategyItem represents a prompt strategy record returned by DB search
+type StrategyItem struct {
+   Name       string
+   Path       string
+   Content    string
+   Similarity float64
+}
+
+// SearchStrategies uses the find_similar_strategies SQL function to retrieve strategies
+// with similarity above threshold, limited to maxResults.
+func (s *PostgresStore) SearchStrategies(ctx context.Context, embedding []float32, threshold float64, maxResults int) ([]StrategyItem, error) {
+   vectorLiteral := toVectorLiteral(embedding)
+   pgLogger.Debugf("DB-based searching strategies with threshold=%.4f, maxResults=%d", threshold, maxResults)
+   query := `SELECT name, path, content, similarity FROM find_similar_strategies($1::vector, $2, $3)`
+   rows, err := s.db.QueryContext(ctx, query, vectorLiteral, threshold, maxResults)
+   if err != nil {
+       pgLogger.Errorf("SearchStrategies query failed: %v", err)
+       return nil, err
+   }
+   defer rows.Close()
+   var items []StrategyItem
+   for rows.Next() {
+       var it StrategyItem
+       if err := rows.Scan(&it.Name, &it.Path, &it.Content, &it.Similarity); err != nil {
+           pgLogger.Errorf("SearchStrategies scan failed: %v", err)
+           return nil, err
+       }
+       items = append(items, it)
+   }
+   if err := rows.Err(); err != nil {
+       pgLogger.Errorf("SearchStrategies rows error: %v", err)
+       return nil, err
+   }
+   pgLogger.Infof("SearchStrategies returned %d items", len(items))
+   return items, nil
+}
+
 // UpsertStrategy inserts or updates a prompt strategy record in prompt_strategies table.
-func (s *PostgresStore) UpsertStrategy(ctx context.Context, name, path, content string, embedding []float32) error {
+// Returns the number of rows affected (0 = skipped, 1 = inserted or updated) and an error if any.
+func (s *PostgresStore) UpsertStrategy(ctx context.Context, name, path, content string, embedding []float32) (int64, error) {
    vectorLiteral := toVectorLiteral(embedding)
    pgLogger.Debugf("Upserting strategy %q into prompt_strategies (dimension=%d)", name, s.dimension)
-   // Only update if content or path has changed
    upsert := `
 INSERT INTO prompt_strategies (name, path, content, embedding)
 VALUES ($1, $2, $3, $4::vector)
@@ -161,13 +198,22 @@ ON CONFLICT (name) DO UPDATE SET
   WHERE prompt_strategies.content IS DISTINCT FROM EXCLUDED.content
      OR prompt_strategies.path IS DISTINCT FROM EXCLUDED.path
 `
-   _, err := s.db.ExecContext(ctx, upsert, name, path, content, vectorLiteral)
+   res, err := s.db.ExecContext(ctx, upsert, name, path, content, vectorLiteral)
    if err != nil {
        pgLogger.Errorf("Failed to upsert strategy %q: %v", name, err)
-   } else {
-       pgLogger.Debugf("Successfully upserted strategy %q", name)
+       return 0, err
    }
-   return err
+   rows, err := res.RowsAffected()
+   if err != nil {
+       pgLogger.Errorf("Failed to get RowsAffected for strategy %q: %v", name, err)
+       return 0, err
+   }
+   if rows > 0 {
+       pgLogger.Debugf("Upsert affected %d row(s) for strategy %q", rows, name)
+   } else {
+       pgLogger.Debugf("Skipped upsert for strategy %q (no change)", name)
+   }
+   return rows, nil
 }
 
 // toVectorLiteral formats a []float32 as a pgvector literal "[x1,x2,...]".
