@@ -54,8 +54,29 @@ func main() {
 	// Fetcher = cache → pgvector → OpenAI
 	embedder := embeddings.NewFetcher(store)
 
-	// Match
+	// Prepare context
 	ctx := context.Background()
+
+	// If using PostgresStore, upsert each strategy into prompt_strategies table
+	if psStore, ok := store.(*embeddings.PostgresStore); ok && psStore != nil {
+		for name, content := range strategies {
+			path := paths[name]
+			// Compute or retrieve embedding
+			vec, err := embedder.Get(ctx, content)
+			if err != nil {
+				logger.Errorf("Failed to compute embedding for strategy %q: %v", name, err)
+				continue
+			}
+			// Upsert into prompt_strategies
+			if err := psStore.UpsertStrategy(ctx, name, path, content, vec); err != nil {
+				logger.Errorf("Failed to upsert strategy %q: %v", name, err)
+			} else {
+				logger.Infof("Upserted strategy %q into prompt_strategies table", name)
+			}
+		}
+	}
+
+	// Match
 	result, err := intent.MatchBestStrategy(ctx, query, strategies, embedder, *threshold)
 	if err != nil {
 		logger.Fatalf("Match failed: %v", err)

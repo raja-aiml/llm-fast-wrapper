@@ -146,6 +146,31 @@ func (s *PostgresStore) SearchByEmbedding(ctx context.Context, embedding []float
 	return items, nil
 }
 
+// UpsertStrategy inserts or updates a prompt strategy record in prompt_strategies table.
+func (s *PostgresStore) UpsertStrategy(ctx context.Context, name, path, content string, embedding []float32) error {
+   vectorLiteral := toVectorLiteral(embedding)
+   pgLogger.Debugf("Upserting strategy %q into prompt_strategies (dimension=%d)", name, s.dimension)
+   // Only update if content or path has changed
+   upsert := `
+INSERT INTO prompt_strategies (name, path, content, embedding)
+VALUES ($1, $2, $3, $4::vector)
+ON CONFLICT (name) DO UPDATE SET
+    path = EXCLUDED.path,
+    content = EXCLUDED.content,
+    embedding = EXCLUDED.embedding
+  WHERE prompt_strategies.content IS DISTINCT FROM EXCLUDED.content
+     OR prompt_strategies.path IS DISTINCT FROM EXCLUDED.path
+`
+   _, err := s.db.ExecContext(ctx, upsert, name, path, content, vectorLiteral)
+   if err != nil {
+       pgLogger.Errorf("Failed to upsert strategy %q: %v", name, err)
+   } else {
+       pgLogger.Debugf("Successfully upserted strategy %q", name)
+   }
+   return err
+}
+
+// toVectorLiteral formats a []float32 as a pgvector literal "[x1,x2,...]".
 func toVectorLiteral(vec []float32) string {
 	parts := make([]string, len(vec))
 	for i, v := range vec {
