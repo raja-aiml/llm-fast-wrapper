@@ -1,40 +1,56 @@
 package logging
 
 import (
-   "fmt"
-   "os"
-   "path/filepath"
+	"fmt"
+	"os"
+	"path/filepath"
 
-   "go.uber.org/zap"
-   "go.uber.org/zap/zapcore"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-// InitLogger initializes a SugaredLogger writing to the given output paths.
-// If no paths are provided, defaults to "logs/llm-client.log".
-// Paths may be "stdout" or "stderr" or file paths; directories are created as needed.
+// InitLogger configures a combined console + optional file logger.
+// If no paths are provided, logs to logs/llm-client.log and stdout.
 func InitLogger(outPaths ...string) *zap.SugaredLogger {
-	cfg := zap.NewProductionConfig()
-	// Determine output paths
-	paths := outPaths
-	if len(paths) == 0 {
-		paths = []string{"logs/llm-client.log"}
-	}
-	// Ensure directories exist for file paths
-	for _, p := range paths {
-		if p != "stdout" && p != "stderr" {
-			dir := filepath.Dir(p)
-			if dir != "" && dir != "." {
-				_ = os.MkdirAll(dir, 0o755)
-			}
-		}
-	}
-	cfg.OutputPaths = paths
-	cfg.EncoderConfig.TimeKey = "time"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	var cores []zapcore.Core
 
-	logr, err := cfg.Build()
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize logger: %v", err))
+	// Console output
+	consoleEncoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	consoleCore := zapcore.NewCore(consoleEncoder, zapcore.AddSync(os.Stdout), zapcore.InfoLevel)
+	cores = append(cores, consoleCore)
+
+	// Default to log file if none given
+	if len(outPaths) == 0 {
+		outPaths = []string{"logs/llm-client.log"}
 	}
-	return logr.Sugar()
+
+	// File outputs (skip stdout/stderr)
+	for _, path := range outPaths {
+		if path == "stdout" || path == "stderr" {
+			continue
+		}
+
+		// Ensure log directory exists
+		if dir := filepath.Dir(path); dir != "" && dir != "." {
+			_ = os.MkdirAll(dir, 0o755)
+		}
+
+		// Set up JSON file encoder
+		encoderCfg := zap.NewProductionEncoderConfig()
+		encoderCfg.TimeKey = "time"
+		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		fileEncoder := zapcore.NewJSONEncoder(encoderCfg)
+
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "⚠️  Failed to open log file %s: %v\n", path, err)
+			continue
+		}
+		fileCore := zapcore.NewCore(fileEncoder, zapcore.AddSync(file), zapcore.InfoLevel)
+		cores = append(cores, fileCore)
+	}
+
+	// Combine all outputs
+	logger := zap.New(zapcore.NewTee(cores...))
+	return logger.Sugar()
 }
