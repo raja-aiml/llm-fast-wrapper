@@ -1,10 +1,12 @@
 package prompt
 
 import (
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // PostgresLogger stores prompt and response logs using GORM.
@@ -14,7 +16,13 @@ type PostgresLogger struct {
 
 // NewPostgresLogger connects using GORM and ensures the prompt_log table.
 func NewPostgresLogger(dsn string) (Logger, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	cfg := &gorm.Config{}
+
+	if os.Getenv("GORM_LOG_LEVEL") == "silent" {
+		cfg.Logger = logger.Discard
+	}
+
+	db, err := gorm.Open(postgres.Open(dsn), cfg)
 	if err != nil {
 		return nil, err
 	}
