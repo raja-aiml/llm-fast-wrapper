@@ -10,7 +10,15 @@ import (
 )
 
 func Start() error {
-	r := gin.Default()
+		// set Gin to release mode to disable debug logs and warnings in production
+		gin.SetMode(gin.ReleaseMode)
+		// create a new Gin engine and attach Logger and Recovery middleware
+		r := gin.New()
+		r.Use(gin.Logger(), gin.Recovery())
+		// disable trusting all proxies by default; configure as needed for your deployment
+		if err := r.SetTrustedProxies(nil); err != nil {
+			return err
+		}
 	client := llm.NewOpenAIStreamer()
 
 	r.POST("/v1/chat/completions", func(c *gin.Context) {
