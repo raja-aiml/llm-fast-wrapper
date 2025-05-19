@@ -15,7 +15,7 @@ tasks:
     desc: "Stop all services and remove containers"
     cmds:
       - docker compose {{.COMMON_FLAGS}} --profile splunk --profile pgvector --profile pgadmin --profile prometheus down --volumes --remove-orphans
-      - docker rm $(docker ps -aq -f status=exited) || echo "No exited containers to remove."
+      - docker ps -aq -f status=exited | xargs -r docker rm || echo "No exited containers to remove."
 
   restart:
     desc: "Rebuild and restart all services"
