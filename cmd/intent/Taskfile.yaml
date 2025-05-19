@@ -1,0 +1,67 @@
+version: '3'
+
+env:
+  DB_DSN: postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable
+  DB_DIM: 1536
+  STRATEGY_DIR: ../prompting-strategies
+  EXT: .md
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task -l
+
+  run:
+    desc: Run intent match (in-memory)
+    cmds:
+      - |
+        REPO_ROOT=$(git rev-parse --show-toplevel)
+        go run "$REPO_ROOT/cmd/intent/main.go" --dir "{{.STRATEGY_DIR}}" "Explain TCP"
+    silent: true
+    sh: true
+
+  run:db:
+    desc: Run intent match via PostgreSQL pgvector
+    cmds:
+      - |
+        REPO_ROOT=$(git rev-parse --show-toplevel)
+        go run "$REPO_ROOT/cmd/intent/main.go" \
+          --db-dsn "{{.DB_DSN}}" \
+          --db-dim {{.DB_DIM}} \
+          --use-db \
+          --dir "{{.STRATEGY_DIR}}" \
+          --ext "{{.EXT}}" \
+          "Explain TCP"
+    silent: true
+    sh: true
+
+  seed:
+    desc: Seed strategies into pgvector
+    cmds:
+      - |
+        REPO_ROOT=$(git rev-parse --show-toplevel)
+        go run "$REPO_ROOT/cmd/intent/main.go" \
+          --db-dsn "{{.DB_DSN}}" \
+          --db-dim {{.DB_DIM}} \
+          --dir "{{.STRATEGY_DIR}}" \
+          --ext "{{.EXT}}" \
+          --seed-only
+    silent: true
+    sh: true
+
+  test:
+    desc: Run all unit tests
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run staticcheck and go vet
+    cmds:
+      - staticcheck ./...
+      - go vet ./...
+
+  fmt:
+    desc: Format all Go files
+    cmds:
+      - go fmt ./...

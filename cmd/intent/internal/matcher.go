@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings"
-	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/storage/postgres"
+	"github.com/raja.aiml/llm-fast-wrapper/internal/embeddings/storage"
 	"github.com/raja.aiml/llm-fast-wrapper/internal/intent"
 	"go.uber.org/zap"
 )
@@ -20,12 +20,16 @@ func matchQuery(
 	logger *zap.SugaredLogger,
 ) *intent.MatchResult {
 	if useDB {
-		psStore := store.(*postgres.PostgresStore)
+		//psStore := store.(*postgres.PostgresStore)
+		advancedStore, ok := store.(storage.AdvancedVectorStore)
+		if !ok {
+			logger.Fatal("Store does not support advanced search features")
+		}
 		vec, err := embedder.Get(ctx, query)
 		if err != nil {
 			logger.Fatalf("Embedding failed for query: %v", err)
 		}
-		items, err := psStore.SearchStrategies(ctx, vec, threshold, 1)
+		items, err := advancedStore.SearchStrategies(ctx, vec, threshold, 1)
 		if err != nil {
 			logger.Fatalf("DB search failed: %v", err)
 		}

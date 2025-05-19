@@ -68,7 +68,8 @@ func connectStore(cfg *Config, logger *zap.SugaredLogger) storage.VectorStore {
 
 func initEmbedder(cfg *Config, store storage.VectorStore, logger *zap.SugaredLogger) *embeddings.Service {
 	// log the configuration
-	logger.Infof("Using DB  with DSN: %s", cfg.DbDSN)
+	logger.Infof("Initialized OpenAI provider with default model")
+	logger.Debugf("Using DB  with DSN: %s", cfg.DbDSN)
 	provider, err := api.NewOpenAIProvider()
 	if err != nil {
 		logger.Fatalf("Failed to initialize OpenAI provider: %v", err)
