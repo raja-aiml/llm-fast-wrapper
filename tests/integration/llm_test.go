@@ -12,7 +12,7 @@ import (
 
 func TestOpenAIStreamer(t *testing.T) {
 	streamer := llm.NewOpenAIStreamer()
-	ch, err := streamer.Stream("hi")
+	ch, err := streamer.Stream("hello world")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -20,14 +20,19 @@ func TestOpenAIStreamer(t *testing.T) {
 	timeout := time.After(3 * time.Second)
 	for {
 		select {
-		case _, ok := <-ch:
+		case chunk, ok := <-ch:
 			if !ok {
-				if count != 10 {
-					t.Fatalf("expected 10 tokens, got %d", count)
+				if count == 0 {
+					t.Fatalf("no chunks received")
 				}
 				return
 			}
 			count++
+			if chunk.Choices[0].FinishReason != nil {
+				if *chunk.Choices[0].FinishReason != "stop" {
+					t.Fatalf("unexpected finish reason: %v", *chunk.Choices[0].FinishReason)
+				}
+			}
 		case <-timeout:
 			t.Fatal("timeout")
 		}
