@@ -1,6 +1,7 @@
 package ginapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,24 +14,59 @@ func Start() error {
 	r := gin.Default()
 	client := llm.NewOpenAIStreamer()
 
-	r.GET("/stream", func(c *gin.Context) {
-		prompt := c.Query("prompt")
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		var req struct {
+			Model    string `json:"model"`
+			Messages []struct {
+				Role    string `json:"role"`
+				Content string `json:"content"`
+			} `json:"messages"`
+			Stream bool `json:"stream"`
+		}
+		if err := c.BindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if !req.Stream {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "stream must be true"})
+			return
+		}
+
+		var prompt string
+		for _, m := range req.Messages {
+			if m.Role == "user" {
+				prompt += m.Content + " "
+			}
+		}
+
 		ch, err := client.Stream(prompt)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
+
 		c.Writer.Header().Set("Content-Type", "text/event-stream")
 		c.Writer.WriteHeader(http.StatusOK)
 		c.Writer.Flush()
-		for token := range ch {
-			msg := fmt.Sprintf("data: %s\n\n", token)
-			if _, err := c.Writer.Write([]byte(msg)); err != nil {
+		enc := json.NewEncoder(c.Writer)
+		for chunk := range ch {
+			if _, err := c.Writer.Write([]byte("data: ")); err != nil {
 				log.Println("write error", err)
 				return
 			}
+			if err := enc.Encode(chunk); err != nil {
+				log.Println("encode error", err)
+				return
+			}
+			if _, err := c.Writer.Write([]byte("\n")); err != nil {
+				log.Println("write error", err)
+				return
+			}
+			c.Writer.Write([]byte("\n"))
 			c.Writer.Flush()
 		}
+		c.Writer.Write([]byte("data: [DONE]\n\n"))
+		c.Writer.Flush()
 	})
 
 	return r.Run(":8080")
