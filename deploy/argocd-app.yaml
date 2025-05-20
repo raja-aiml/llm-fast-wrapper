@@ -7,7 +7,7 @@ spec:
   source:
     repoURL: https://github.com/raja.aiml/llm-fast-wrapper
     targetRevision: main
-    path: charts/llm-fast-wrapper
+    path: deploy/charts/llm-fast-wrapper
   destination:
     server: https://kubernetes.default.svc
     namespace: llm

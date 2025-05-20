@@ -12,6 +12,6 @@ jobs:
       - run: echo "$KUBE_CONFIG" | base64 -d > kubeconfig
         env:
           KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
-      - run: helm upgrade --install llm charts/llm-fast-wrapper --namespace llm --create-namespace --set llm.backend=openai --set llm.openai.apiKey=${{ secrets.OPENAI_API_KEY }}
+      - run: helm upgrade --install llm deploy/charts/llm-fast-wrapper --namespace llm --create-namespace --set llm.backend=openai --set llm.openai.apiKey=${{ secrets.OPENAI_API_KEY }}
         env:
           KUBECONFIG: kubeconfig

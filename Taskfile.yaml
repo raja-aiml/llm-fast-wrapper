@@ -7,6 +7,12 @@ includes:
 
 tasks:
   default:
-    desc: "List all services"
+      desc: "List all services"
+      cmds:
+        - task --list
+
+  deploy:
+    desc: "Build Docker image and deploy via Helm"
     cmds:
-      - task --list
+      - docker build -t llm-fast-wrapper:local .
+      - helm upgrade --install llm deploy/charts/llm-fast-wrapper --namespace llm --create-namespace --set llm.backend=openai --set llm.openai.apiKey=$OPENAI_API_KEY

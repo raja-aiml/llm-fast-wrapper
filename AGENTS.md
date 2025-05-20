@@ -85,7 +85,7 @@
   * `telemetry` – OpenTelemetry setup utilities.
   * `recovery` – Disaster recovery and resilience utilities.
 * `docker/` – `docker-compose.yaml` and Prometheus configuration for local infra.
-* `k8s/` and `scripts/` – Helper manifests and scripts for running on Kubernetes via kind.
+* `deploy/` and `scripts/` – Helper manifests and scripts for running on Kubernetes via kind.
 * `tests/` – Ginkgo/Golang unit tests with comprehensive coverage metrics.
 * `Taskfile.yaml` – Defines commands for development, testing, and infrastructure.
 

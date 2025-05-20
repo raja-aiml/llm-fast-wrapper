@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "llm-fast-wrapper.fullname" . }}
+  labels:
+    app: {{ include "llm-fast-wrapper.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "llm-fast-wrapper.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "llm-fast-wrapper.name" . }}
+    spec:
+      containers:
+        - name: llm-fast-wrapper
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve", "--fiber"]
+          ports:
+            - containerPort: 8080

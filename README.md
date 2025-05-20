@@ -9,7 +9,7 @@
 - Embedding service with optional pgvector storage and in-memory cache
 - Prometheus metrics, Jaeger tracing and Zap structured logging
 - Docker Compose environment with PostgreSQL and Splunk for local testing
-- Kubernetes manifests and Helm chart for cluster deployments
+- Kubernetes manifests and Helm chart (under `deploy/`) for cluster deployments
 
 ## Getting Started
 
