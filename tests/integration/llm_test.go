@@ -4,6 +4,7 @@
 package integration_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 func TestOpenAIStreamer(t *testing.T) {
 	streamer := llm.NewOpenAIStreamer()
-	ch, err := streamer.Stream("hello world")
+	ch, err := streamer.Stream(context.Background(), "hello world")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

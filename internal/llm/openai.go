@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"strings"
 	"time"
 )
@@ -12,7 +13,7 @@ func NewOpenAIStreamer() Streamer { return &OpenAIStreamer{} }
 // Stream returns mock chat completion chunks that follow the OpenAI streaming
 // specification. The implementation simply splits the prompt into tokens and
 // emits one token per chunk with slight delays to mimic network latency.
-func (o *OpenAIStreamer) Stream(prompt string) (<-chan ChatCompletionChunk, error) {
+func (o *OpenAIStreamer) Stream(ctx context.Context, prompt string) (<-chan ChatCompletionChunk, error) {
 	ch := make(chan ChatCompletionChunk)
 	go func() {
 		defer close(ch)
@@ -20,7 +21,14 @@ func (o *OpenAIStreamer) Stream(prompt string) (<-chan ChatCompletionChunk, erro
 		id := "chatcmpl-mock"
 		created := time.Now().Unix()
 		for _, t := range tokens {
-			ch <- ChatCompletionChunk{
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			select {
+			case ch <- ChatCompletionChunk{
 				ID:      id,
 				Object:  "chat.completion.chunk",
 				Created: created,
@@ -28,11 +36,20 @@ func (o *OpenAIStreamer) Stream(prompt string) (<-chan ChatCompletionChunk, erro
 					Delta: Delta{Content: t + " "},
 					Index: 0,
 				}},
+			}:
+			case <-ctx.Done():
+				return
 			}
-			time.Sleep(100 * time.Millisecond)
+
+			select {
+			case <-time.After(100 * time.Millisecond):
+			case <-ctx.Done():
+				return
+			}
 		}
 		stop := "stop"
-		ch <- ChatCompletionChunk{
+		select {
+		case ch <- ChatCompletionChunk{
 			ID:      id,
 			Object:  "chat.completion.chunk",
 			Created: created,
@@ -41,6 +58,9 @@ func (o *OpenAIStreamer) Stream(prompt string) (<-chan ChatCompletionChunk, erro
 				Index:        0,
 				FinishReason: &stop,
 			}},
+		}:
+		case <-ctx.Done():
+			return
 		}
 	}()
 	return ch, nil
