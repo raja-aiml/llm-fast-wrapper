@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:16
+          image: pgvector/pgvector:pg17
           env:
             - name: POSTGRES_USER
               value: llm
@@ -29,6 +29,19 @@ spec:
               value: llmlogs
           ports:
             - containerPort: 5432
+              hostPort: 5432
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "llm", "-d", "llmlogs"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "llm", "-d", "llmlogs"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
           volumeMounts:
             - name: pgdata
               mountPath: /var/lib/postgresql/data
