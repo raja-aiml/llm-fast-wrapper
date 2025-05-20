@@ -47,7 +47,7 @@ go run cmd/intent/main.go \
 ### 🔍 Match Query with DB-Based Search
 ```bash
 go run cmd/intent/main.go \
-  --db-dsn "postgresql://user:pass@localhost:5432/llmlogs?sslmode=disable" \
+  --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
   --db-dim 1536 \
   --use-db \
   --dir ./prompting-strategies \
