@@ -1,5 +1,7 @@
 package llm
 
+import "context"
+
 // ChatCompletionChunk represents a single chunk of a streamed chat completion
 // response matching the OpenAI specification.
 type ChatCompletionChunk struct {
@@ -23,5 +25,5 @@ type Delta struct {
 
 // Streamer streams chat completions following the OpenAI streaming format.
 type Streamer interface {
-	Stream(prompt string) (<-chan ChatCompletionChunk, error)
+	Stream(ctx context.Context, prompt string) (<-chan ChatCompletionChunk, error)
 }

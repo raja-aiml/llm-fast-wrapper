@@ -37,7 +37,7 @@ func Start() error {
 			}
 		}
 
-		ch, err := client.Stream(prompt)
+		ch, err := client.Stream(c.Context(), prompt)
 		if err != nil {
 			return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 		}
