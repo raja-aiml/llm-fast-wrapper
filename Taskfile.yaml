@@ -16,3 +16,13 @@ tasks:
     cmds:
       - docker build -t llm-fast-wrapper:local .
       - helm upgrade --install llm deploy/charts/llm-fast-wrapper --namespace llm --create-namespace --set llm.backend=openai --set llm.openai.apiKey=$OPENAI_API_KEY
+
+  k3d:up:
+    desc: "Create k3d cluster and deploy Postgres and Argo CD"
+    cmds:
+      - scripts/k3d-setup.sh
+
+  k3d:down:
+    desc: "Delete k3d cluster and related resources"
+    cmds:
+      - scripts/cleanup.sh

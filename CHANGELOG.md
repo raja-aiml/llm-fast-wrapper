@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Introduced context-aware streaming in OpenAI mock streamer and updated HTTP servers accordingly
+- Switched local Kubernetes setup to k3d with bundled Postgres and Argo CD manifests
 
 ## v0.1.0 - 2025-05-17
 - Initial project scaffold with Fiber and Gin servers
@@ -9,3 +10,4 @@
 - Docker compose infra
 - Helm chart and kind scripts
 - GitHub workflows
+

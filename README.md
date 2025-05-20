@@ -38,6 +38,18 @@ task client:run -- --prompt "hello"
 
 All commands are defined in `Taskfile.yaml`. Logs are written under `logs/`.
 
+To start a local Kubernetes cluster with Postgres and Argo CD:
+
+```bash
+task k3d:up
+```
+
+Tear it down with:
+
+```bash
+task k3d:down
+```
+
 ## Repository Layout
 
 - `cmd/` – main entrypoints for the API and subcommands

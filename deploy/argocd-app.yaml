@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: llm-fast-wrapper
+  namespace: argocd
 spec:
   project: default
   source:
@@ -15,3 +16,4 @@ spec:
     automated:
       prune: true
       selfHeal: true
+
