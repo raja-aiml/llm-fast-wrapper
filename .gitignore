@@ -295,6 +295,8 @@ $RECYCLE.BIN/
 
 # Binaries
 llm-fast-wrapper
+!deploy/charts/llm-fast-wrapper/
+!deploy/charts/llm-fast-wrapper/**
 *.exe
 *.test
 *.out
