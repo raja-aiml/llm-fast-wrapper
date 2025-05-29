@@ -77,30 +77,44 @@ Follow these steps to deploy, migrate the database, seed embeddings, and test th
      -o jsonpath="{.data.password}" | base64 --decode)
    argocd login localhost:8080 --username admin --password "$PASSWORD" --insecure
    ```
-5. Sync the Argo CD application (runs DB migrations automatically):
+5. (Optional) Register your Git repository with Argo CD:
+   If the repo is private, you must add it before syncing:
+   ```bash
+   argocd repo add https://github.com/raja.aiml/llm-fast-wrapper \
+     --username YOUR_GITHUB_USER \
+     --password YOUR_GITHUB_TOKEN
+   ```
+   Or, to use your local clone directly via a Git daemon:
+   ```bash
+   # In your project root (bare or regular repo):
+   git daemon --verbose --export-all --base-path=$(pwd) --port=9418 &
+   # Add the local repo to Argo CD using the Git protocol
+   argocd repo add git://$(hostname)/llm-fast-wrapper --type git
+   ```
+6. Sync the Argo CD application (runs DB migrations automatically):
    ```bash
    argocd app sync llm-fast-wrapper
    ```
-6. Check the migration Job logs:
+7. Check the migration Job logs:
    ```bash
    kubectl get jobs -n llm
    kubectl logs job/llm-fast-wrapper-db-migrate -n llm
    ```
-7. Validate the Postgres schema:
+8. Validate the Postgres schema:
    ```bash
    psql "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" -c "\dt"
    ```
-8. (Optional) Verify embeddings seeding:
+9. (Optional) Verify embeddings seeding:
    ```bash
    kubectl logs job/llm-fast-wrapper-intent-seed -n llm
    psql "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" -c "SELECT count(*) FROM embeddings;"
    ```
-9. Smoke-test the LLM service:
+10. Smoke-test the LLM service:
    ```bash
    kubectl port-forward svc/llm-fast-wrapper 8080:8080 -n llm
    curl localhost:8080/health
    ```
-10. Run the intent-matching CLI locally:
+11. Run the intent-matching CLI locally:
    ```bash
    go run cmd/intent/main.go \
      --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
@@ -109,7 +123,7 @@ Follow these steps to deploy, migrate the database, seed embeddings, and test th
      --dir ./prompting-strategies \
      "Explain TCP"
    ```
-11. Tear down the application and cluster:
+12. Tear down the application and cluster:
    ```bash
    argocd app delete llm-fast-wrapper --cascade
    scripts/cluster.sh delete
