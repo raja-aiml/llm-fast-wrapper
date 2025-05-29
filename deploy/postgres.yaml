@@ -26,10 +26,9 @@ spec:
             - name: POSTGRES_PASSWORD
               value: llm
             - name: POSTGRES_DB
-              value: llmlogs
+              value: llmdb
           ports:
             - containerPort: 5432
-              hostPort: 5432
           livenessProbe:
             exec:
               command: ["pg_isready", "-U", "llm", "-d", "llmlogs"]
@@ -55,6 +54,7 @@ metadata:
   name: postgres
   namespace: llm
 spec:
+  type: LoadBalancer
   selector:
     app: postgres
   ports:

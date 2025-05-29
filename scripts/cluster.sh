@@ -114,7 +114,7 @@ ensure_artifacts() {
 create_cluster() {
   k3d cluster list | grep -q "^$CLUSTER_NAME" && { log_warn "Cluster '$CLUSTER_NAME' already exists."; return; }
   log_info "Creating k3d cluster '$CLUSTER_NAME'..."
-  k3d cluster create "$CLUSTER_NAME" --timeout "$TIMEOUT_CLUSTER"
+  k3d cluster create "$CLUSTER_NAME" --port 5432:5432@loadbalancer --timeout "$TIMEOUT_CLUSTER"
   register_cleanup "delete_cluster"
   kubectl wait --for=condition=Ready nodes --all --timeout=60s
 }
