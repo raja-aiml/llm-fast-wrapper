@@ -85,7 +85,7 @@
   * `telemetry` – OpenTelemetry setup utilities.
   * `recovery` – Disaster recovery and resilience utilities.
 * `docker/` – `docker-compose.yaml` and Prometheus configuration for local infra.
-* `deploy/` and `scripts/` – Helper manifests and scripts for running on Kubernetes via kind.
+* `deploy/` and `scripts/` – Helper manifests and scripts for running on Kubernetes via k3d (K3s in Docker) using `scripts/cluster.sh`.
 * `tests/` – Ginkgo/Golang unit tests with comprehensive coverage metrics.
 * `Taskfile.yaml` – Defines commands for development, testing, and infrastructure.
 
@@ -280,7 +280,7 @@ func TestStreamProcessor_Process(t *testing.T) {
    * `task dr:simulate`
    * `task lint`, `task vet`, `task bench`
 4. **Env Vars** – Set `OPENAI_API_KEY`. Use docker-compose for local services (PostgreSQL 5432, Prometheus 9090).
-5. **Kubernetes** – `task kind:up`, `task kind:down`. See `scripts/kind-setup.sh`, `scripts/cleanup.sh`.
+5. **Kubernetes** – `task k3d:up`, `task k3d:down`. These invoke `scripts/cluster.sh setup` and `scripts/cluster.sh delete` for cluster lifecycle.
 6. **Logs & Telemetry** – Uses Zap + OpenTelemetry. Local logs saved to `logs/llm-client.log`.
 
 ## Troubleshooting Guide
