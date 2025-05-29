@@ -86,12 +86,17 @@ Follow these steps to deploy, migrate the database, seed embeddings, and test th
    ```
    Or, to use your local clone directly via a Git daemon:
    ```bash
-   # In your project root (bare or regular repo):
-   git daemon --verbose --export-all --base-path=$(pwd) --port=9418 &
-   # Add the local repo to Argo CD using the Git protocol
-   argocd repo add git://$(hostname)/llm-fast-wrapper --type git
-   # Instruct Argo CD to point the application at your local repo
-   argocd app set llm-fast-wrapper --repo git://$(hostname)/llm-fast-wrapper
+   # In your project root (bare or regular repo):# Start git daemon on your host
+   cd ~/workspace/dev/  # Directory containing llm-fast-wrapper
+   git daemon --verbose --export-all --base-path=$(pwd) --port=9418 
+
+   # Make sure the repo is exportable
+   cd llm-fast-wrapper
+   touch .git/git-daemon-export-ok
+
+   # Add repo to ArgoCD using k3d's host resolution
+   argocd repo add git://host.k3d.internal:9418/llm-fast-wrapper --type git
+   argocd app set llm-fast-wrapper --repo git://host.k3d.internal:9418/llm-fast-wrapper
    ```
 6. Sync the Argo CD application (runs DB migrations automatically):
    ```bash
