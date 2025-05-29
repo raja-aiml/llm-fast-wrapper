@@ -90,6 +90,8 @@ Follow these steps to deploy, migrate the database, seed embeddings, and test th
    git daemon --verbose --export-all --base-path=$(pwd) --port=9418 &
    # Add the local repo to Argo CD using the Git protocol
    argocd repo add git://$(hostname)/llm-fast-wrapper --type git
+   # Instruct Argo CD to point the application at your local repo
+   argocd app set llm-fast-wrapper --repo git://$(hostname)/llm-fast-wrapper
    ```
 6. Sync the Argo CD application (runs DB migrations automatically):
    ```bash
