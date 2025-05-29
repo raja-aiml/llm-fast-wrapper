@@ -26,7 +26,7 @@ spec:
             - name: POSTGRES_PASSWORD
               value: llm
             - name: POSTGRES_DB
-              value: llmdb
+              value: llmlogs
           ports:
             - containerPort: 5432
           livenessProbe:

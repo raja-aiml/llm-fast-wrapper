@@ -30,15 +30,18 @@ This CLI classifies user queries by matching them to the most relevant prompt st
 
 ### 🔄 Migrate DB Schema
 ```bash
+# Replace credentials and DSN as needed (default user: llm, password: llm, db: llmlogs)
 go run cmd/migrate/main.go migrate \
-  --db-dsn "postgresql://user:pass@localhost:5432/llmlogs?sslmode=disable" \
+  --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
   --db-dim 1536
 ```
 
+go run cmd/intent/main.go \
 ### 🌱 Seed Strategy Embeddings
 ```bash
+# Replace credentials and DSN as needed (default user: llm, password: llm, db: llmlogs)
 go run cmd/intent/main.go \
-  --db-dsn "postgresql://user:pass@localhost:5432/llmlogs?sslmode=disable" \
+  --db-dsn "postgresql://llm:llm@localhost:5432/llmlogs?sslmode=disable" \
   --db-dim 1536 \
   --dir ./prompting-strategies \
   --seed-only
