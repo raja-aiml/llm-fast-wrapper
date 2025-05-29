@@ -1,0 +1,25 @@
+{{- if .Values.postgres }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "llm-fast-wrapper.fullname" . }}-db-cleanup
+  labels:
+    app: {{ include "llm-fast-wrapper.name" . }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-cleanup
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/app/migrate-cli"
+            - drop
+            - "--db-dsn"
+            - "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}?sslmode=disable"
+{{- end }}

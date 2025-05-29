@@ -5,3 +5,11 @@ image:
 service:
   type: ClusterIP
   port: 8080
+postgres:
+  user: llm
+  password: llm
+  database: llmlogs
+  host: postgres
+  port: 5432
+embedding:
+  dimension: 1536

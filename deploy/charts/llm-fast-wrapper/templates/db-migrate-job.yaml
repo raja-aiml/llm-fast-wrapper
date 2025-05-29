@@ -1,0 +1,28 @@
+{{- if and .Values.postgres .Values.embedding.dimension }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "llm-fast-wrapper.fullname" . }}-db-migrate
+  labels:
+    app: {{ include "llm-fast-wrapper.name" . }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: db-migrate
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - "/app/migrate-cli"
+            - migrate
+            - "--db-dsn"
+            - "postgresql://{{ .Values.postgres.user }}:{{ .Values.postgres.password }}@{{ .Values.postgres.host }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}?sslmode=disable"
+            - "--db-dim"
+            - "{{ .Values.embedding.dimension }}"
+{{- end }}
